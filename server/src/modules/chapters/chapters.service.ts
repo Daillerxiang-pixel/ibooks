@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Chapter } from '../../entities/chapter.entity.js';
-import { UserPurchase } from '../../entities/user-purchase.entity.js';
-import { UserShelf } from '../../entities/user-shelf.entity.js';
+import { Chapter } from '../../entities/chapter.entity';
+import { UserPurchase } from '../../entities/user-purchase.entity';
+import { UserShelf } from '../../entities/user-shelf.entity';
 
 @Injectable()
 export class ChaptersService {

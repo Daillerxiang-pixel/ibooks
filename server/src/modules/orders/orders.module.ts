@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OrdersController } from './orders.controller.js';
-import { OrdersService } from './orders.service.js';
-import { Order } from '../../entities/order.entity.js';
-import { UserPurchase } from '../../entities/user-purchase.entity.js';
-import { User } from '../../entities/user.entity.js';
-import { Chapter } from '../../entities/chapter.entity.js';
+import { OrdersController } from './orders.controller';
+import { OrdersService } from './orders.service';
+import { Order } from '../../entities/order.entity';
+import { UserPurchase } from '../../entities/user-purchase.entity';
+import { User } from '../../entities/user.entity';
+import { Chapter } from '../../entities/chapter.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Order, UserPurchase, User, Chapter])],

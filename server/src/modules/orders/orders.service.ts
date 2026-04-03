@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Order } from '../../entities/order.entity.js';
-import { UserPurchase } from '../../entities/user-purchase.entity.js';
-import { User } from '../../entities/user.entity.js';
-import { Chapter } from '../../entities/chapter.entity.js';
+import { Order } from '../../entities/order.entity';
+import { UserPurchase } from '../../entities/user-purchase.entity';
+import { User } from '../../entities/user.entity';
+import { Chapter } from '../../entities/chapter.entity';
 
 @Injectable()
 export class OrdersService {

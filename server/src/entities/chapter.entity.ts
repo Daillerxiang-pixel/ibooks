@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
-import { Book } from './book.entity.js';
+import { Book } from './book.entity';
 
 @Entity('chapters')
 export class Chapter {

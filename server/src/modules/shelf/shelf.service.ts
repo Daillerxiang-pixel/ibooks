@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserShelf } from '../../entities/user-shelf.entity.js';
-import { Book } from '../../entities/book.entity.js';
+import { UserShelf } from '../../entities/user-shelf.entity';
+import { Book } from '../../entities/book.entity';
 
 @Injectable()
 export class ShelfService {
@@ -31,7 +31,7 @@ export class ShelfService {
   async add(bookId: number, userId: string) {
     const existing = await this.shelfRepo.findOne({ where: { user_id: userId, book_id: bookId } });
     if (existing) {
-      return { success: true, message: '已在书架中' };
+      return { success: true, message: '已在书架' };
     }
     const shelf = this.shelfRepo.create({ user_id: userId, book_id: bookId, read_progress: '{}' });
     await this.shelfRepo.save(shelf);

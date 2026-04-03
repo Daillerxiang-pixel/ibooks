@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Delete, Param, Req } from '@nestjs/common';
-import { ShelfService } from './shelf.service.js';
+import { ShelfService } from './shelf.service';
 
 @Controller('shelf')
 export class ShelfController {
