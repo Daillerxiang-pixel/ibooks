@@ -6,16 +6,16 @@ export class Chapter {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'int' })
   book_id: number;
 
   @ManyToOne(() => Book, book => book.chapters)
   book: Book;
 
-  @Column()
+  @Column({ type: 'int' })
   chapter_num: number;
 
-  @Column()
+  @Column({ type: 'text' })
   title: string;
 
   @Column({ type: 'text' })
@@ -24,7 +24,7 @@ export class Chapter {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   price: number;
 
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   word_count: number;
 
   @CreateDateColumn()

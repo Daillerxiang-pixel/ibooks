@@ -5,10 +5,10 @@ export class UserShelf {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'text' })
   user_id: string;
 
-  @Column()
+  @Column({ type: 'int' })
   book_id: number;
 
   @Column({ type: 'text', nullable: true })

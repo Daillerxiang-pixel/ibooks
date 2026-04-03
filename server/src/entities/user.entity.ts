@@ -5,16 +5,16 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   phone: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   password_hash: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   nickname: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   avatar: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })

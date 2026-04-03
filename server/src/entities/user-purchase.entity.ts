@@ -5,10 +5,10 @@ export class UserPurchase {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'text' })
   user_id: string;
 
-  @Column()
+  @Column({ type: 'int' })
   chapter_id: number;
 
   @CreateDateColumn()
