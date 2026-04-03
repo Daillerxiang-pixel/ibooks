@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>iBooks - 网络小说阅读</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    :root{--primary:#e74c3c;--bg:#f5f5f5;--text:#333;--text2:#666;--text3:#999;--border:#eee}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);max-width:430px;margin:0 auto;min-height:100vh}
+    .page{display:none;padding-bottom:70px;min-height:100vh}
+    .page.active{display:block}
+    .status-bar{height:20px;background:#fff}
+    .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:60px;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100}
+    .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);cursor:pointer}
+    .tab-item.active{color:var(--primary)}
+    .tab-item i{font-size:20px;margin-bottom:2px}
+    .tab-item span{font-size:10px}
+    .home-header{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;padding:16px 16px 60px}
+    .home-header h1{font-size:22px;font-weight:600}
+    .home-header p{font-size:12px;opacity:0.9;margin-top:4px}
+    .search-bar{position:relative;margin:-30px 16px 16px;background:#fff;border-radius:24px;padding:12px 16px;display:flex;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);cursor:pointer}
+    .search-bar i{color:var(--text3);margin-right:8px}
+    .search-bar input{flex:1;border:none;outline:none;font-size:14px;background:transparent;pointer-events:none}
+    .home-content{padding:16px}
+    .section{margin-bottom:20px}
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .section-title{font-size:15px;font-weight:600}
+    .section-more{font-size:12px;color:var(--text3)}
+    .book-scroll{display:flex;overflow-x:auto;gap:12px;padding-bottom:8px;scrollbar-width:none}
+    .book-scroll::-webkit-scrollbar{display:none}
+    .book-card{flex-shrink:0;width:100px;cursor:pointer}
+    .book-cover{width:100px;height:135px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;text-align:center;padding:8px}
+    .book-card h4{font-size:12px;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .book-card p{font-size:10px;color:var(--text3);margin-top:2px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px}
+    .tag{padding:6px 14px;background:#fff;border-radius:16px;font-size:13px;color:var(--text2);border:1px solid var(--border);cursor:pointer}
+    .tag.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .book-list{background:#fff;border-radius:12px;overflow:hidden}
+    .book-item{display:flex;padding:12px;border-bottom:1px solid var(--border);cursor:pointer}
+    .book-item:last-child{border-bottom:none}
+    .book-item:active{background:#f9f9f9}
+    .book-cover-sm{width:60px;height:80px;border-radius:6px;flex-shrink:0}
+    .book-info{flex:1;margin-left:12px;display:flex;flex-direction:column}
+    .book-info h4{font-size:14px;margin-bottom:4px}
+    .book-info p{font-size:12px;color:var(--text2);flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .book-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .book-meta span{font-size:11px;color:var(--text3)}
+    .price{color:var(--primary);font-size:12px;font-weight:500}
+    .shelf-header{background:#fff;padding:16px;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)}
+    .shelf-header h2{font-size:18px}
+    .shelf-edit{font-size:14px;color:var(--primary)}
+    .shelf-tabs{display:flex;background:#fff}
+    .shelf-tab{flex:1;text-align:center;padding:12px 0;font-size:14px;color:var(--text2);border-bottom:2px solid transparent}
+    .shelf-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .shelf-content{padding:16px}
+    .shelf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .shelf-book{cursor:pointer}
+    .shelf-cover{width:100%;aspect-ratio:2/3;border-radius:8px}
+    .shelf-book h4{font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .shelf-book p{font-size:10px;color:var(--text3);margin-top:2px}
+    .empty{text-align:center;padding:60px 0}
+    .empty i{font-size:64px;color:var(--text3);margin-bottom:16px}
+    .empty h3{font-size:16px;color:var(--text2);margin-bottom:8px}
+    .empty p{font-size:13px;color:var(--text3)}
+    .search-header{background:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+    .search-box{flex:1;display:flex;align-items:center;background:#f5f5f5;border-radius:20px;padding:8px 14px}
+    .search-box i{color:var(--text3);margin-right:8px}
+    .search-box input{flex:1;border:none;outline:none;background:transparent;font-size:14px}
+    .search-cancel{font-size:14px;color:var(--text2);white-space:nowrap}
+    .search-hot{padding:16px}
+    .search-hot h3{font-size:14px;margin-bottom:12px}
+    .hot-tags{display:flex;flex-wrap:wrap;gap:8px}
+    .hot-tag{padding:6px 12px;background:#fff;border-radius:14px;font-size:13px;color:var(--text2)}
+    .reader-header{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);z-index:50;opacity:1;transition:opacity 0.3s}
+    .reader-header.hidden{opacity:0;pointer-events:none}
+    .reader-back{font-size:20px}
+    .reader-title{font-size:14px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 12px}
+    .reader-actions{display:flex;gap:16px}
+    .reader-actions i{font-size:18px;color:var(--text2)}
+    .reader-content{padding:60px 20px 80px;font-size:16px;line-height:1.8;background:#faf8f5;min-height:100vh}
+    .reader-content p{text-indent:2em;margin-bottom:12px}
+    .reader-footer{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-around;z-index:50;opacity:1;transition:opacity 0.3s}
+    .reader-footer.hidden{opacity:0;pointer-events:none}
+    .reader-btn{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text2);font-size:11px}
+    .reader-btn i{font-size:20px}
+    .reader-btn.active{color:var(--primary)}
+    .catalog-panel{position:fixed;top:0;right:-70%;width:70%;max-width:300px;height:100vh;background:#fff;box-shadow:-4px 0 20px rgba(0,0,0,0.1);z-index:200;transition:right 0.3s ease;overflow-y:auto}
+    .catalog-panel.show{right:0}
+    .catalog-header{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .catalog-header h3{font-size:16px}
+    .catalog-close{font-size:20px;color:var(--text2)}
+    .catalog-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #f5f5f5;cursor:pointer}
+    .catalog-item:active{background:#f9f9f9}
+    .catalog-item.current{color:var(--primary)}
+    .catalog-item.locked{color:var(--text3)}
+    .chapter-price{font-size:12px;color:var(--primary)}
+    .catalog-item.locked .chapter-price{color:var(--text3)}
+    .profile-header{background:linear-gradient(135deg,#e74c3c,#c0392b);padding:24px 16px 50px;color:#fff}
+    .profile-info{display:flex;align-items:center}
+    .profile-avatar{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px}
+    .profile-details{margin-left:14px}
+    .profile-name{font-size:18px;font-weight:500}
+    .profile-id{font-size:12px;opacity:0.8;margin-top:4px}
+    .profile-balance{margin-top:16px;background:rgba(255,255,255,0.15);border-radius:12px;padding:14px;display:flex;justify-content:space-around}
+    .balance-item{text-align:center}
+    .balance-item h4{font-size:20px;font-weight:600}
+    .balance-item p{font-size:11px;opacity:0.9;margin-top:2px}
+    .profile-content{margin-top:-30px;padding:0 16px 20px}
+    .profile-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
+    .profile-menu{display:flex;flex-wrap:wrap}
+    .profile-menu-item{width:25%;display:flex;flex-direction:column;align-items:center;padding:12px 0;cursor:pointer}
+    .profile-menu-item i{font-size:24px;color:var(--text);margin-bottom:6px}
+    .profile-menu-item span{font-size:11px;color:var(--text2)}
+    .order-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .order-header h4{font-size:14px}
+    .order-header span{font-size:12px;color:var(--text3)}
+    .order-list{display:flex;justify-content:space-around}
+    .order-item{display:flex;flex-direction:column;align-items:center;color:var(--text2)}
+    .order-item i{font-size:24px;margin-bottom:6px}
+    .order-item span{font-size:11px}
+    .detail-header{position:relative;background:linear-gradient(to bottom,rgba(0,0,0,0.6),rgba(0,0,0,0)),linear-gradient(135deg,#667eea,#764ba2);padding:16px 16px 70px;color:#fff}
+    .detail-back{font-size:20px}
+    .detail-info{display:flex;margin-top:20px}
+    .detail-cover{width:110px;height:150px;border-radius:8px;background:rgba(255,255,255,0.2)}
+    .detail-meta{margin-left:14px;flex:1}
+    .detail-meta h2{font-size:20px;margin-bottom:6px}
+    .detail-meta p{font-size:13px;opacity:0.9;margin-bottom:4px}
+    .detail-tags{display:flex;gap:6px;margin-top:12px}
+    .detail-tag{padding:3px 8px;background:rgba(255,255,255,0.2);border-radius:10px;font-size:11px}
+    .detail-content{margin-top:-50px;padding:0 16px 80px}
+    .detail-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px}
+    .detail-desc{font-size:13px;line-height:1.6;color:var(--text2);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .detail-desc.expanded{-webkit-line-clamp:unset}
+    .detail-expand{text-align:center;font-size:12px;color:var(--primary);margin-top:8px;cursor:pointer}
+    .chapter-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .chapter-header h3{font-size:15px}
+    .chapter-header span{font-size:12px;color:var(--text3)}
+    .chapter-list{max-height:300px;overflow-y:auto}
+    .chapter-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f5f5f5;cursor:pointer}
+    .chapter-item:last-child{border-bottom:none}
+    .chapter-item:active{background:#f9f9f9}
+    .chapter-item h4{font-size:13px;font-weight:normal}
+    .chapter-item span{font-size:11px;color:var(--text3)}
+    .chapter-item.free{color:#27ae60}
+    .chapter-item.locked{color:var(--text3)}
+    .detail-footer{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;border-top:1px solid var(--border);padding:10px 16px;display:flex;gap:10px;z-index:50}
+    .detail-footer button{flex:1;padding:12px 0;border-radius:22px;font-size:15px;font-weight:500;border:none;cursor:pointer}
+    .btn-read{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+    .btn-subscribe{background:var(--primary);color:#fff}
+    .pay-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:flex-end;justify-content:center}
+    .pay-modal.show{display:flex}
+    .pay-content{width:100%;max-width:430px;background:#fff;border-radius:16px 16px 0 0;padding:20px;animation:slideUp 0.3s ease}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .pay-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .pay-header h3{font-size:16px}
+    .pay-close{font-size:20px;color:var(--text2)}
+    .pay-amount{text-align:center;padding:20px 0;border-bottom:1px solid var(--border)}
+    .pay-amount span{font-size:32px;color:var(--primary);font-weight:600}
+    .pay-methods{padding:16px 0}
+    .pay-method{display:flex;align-items:center;padding:14px 0;cursor:pointer}
+    .pay-method i{font-size:24px;margin-right:12px}
+    .pay-method i.wechat{color:#07c160}
+    .pay-method i.alipay{color:#1677ff}
+    .pay-method span{flex:1;font-size:14px}
+    .pay-method .radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);position:relative}
+    .pay-method.selected .radio{border-color:var(--primary)}
+    .pay-method.selected .radio::after{content:'';position:absolute;width:10px;height:10px;background:var(--primary);border-radius:50%;top:2px;left:2px}
+    .pay-btn{width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:22px;font-size:16px;font-weight:500;margin-top:16px;cursor:pointer}
+    .toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:400;display:none}
+    .toast.show{display:block;animation:toastIn 0.3s ease}
+    @keyframes toastIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  </style>
+</head>
+<body>
+  <div class="status-bar"></div>
+  <div id="page-home" class="page active">
+    <div class="home-header"><h1>iBooks</h1><p>海量精品小说，尽情阅读</p></div>
+    <div class="search-bar" onclick="goPage('search')"><i class="fas fa-search"></i><input type="text" placeholder="搜索书名或作者" readonly></div>
+    <div class="home-content">
+      <div class="section">
+        <div class="tags">
+          <span class="tag active" onclick="filterTag(this)">全部</span>
+          <span class="tag" onclick="filterTag(this)">都市</span>
+          <span class="tag" onclick="filterTag(this)">玄幻</span>
+          <span class="tag" onclick="filterTag(this)">修仙</span>
+          <span class="tag" onclick="filterTag(this)">穿越</span>
+          <span class="tag" onclick="filterTag(this)">总裁</span>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><span class="section-title">🔥 热门推荐</span><span class="section-more">更多 <i class="fas fa-chevron-right"></i></span></div>
+        <div class="book-scroll">
+          <div class="book-card" onclick="goPage('detail')"><div class="book-cover" style="background:linear-gradient(135deg,#667eea,#764ba2)">逆袭人生</div><h4>逆袭人生</h4><p>都市·完结</p></div>
+          <div class="book-card" onclick="goPage('detail')"><div class="book-cover" style="background:linear-gradient(135deg,#f093fb,#f5576c)">总裁大人</div><h4>总裁大人</h4><p>现代·连载</p></div>
+          <div class="book-card" onclick="goPage('detail')"><div class="book-cover" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">仙武帝尊</div><h4>仙武帝尊</h4><p>玄幻·完结</p></div>
+          <div class="book-card" onclick="goPage('detail')"><div class="book-cover" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">穿越异世</div><h4>穿越异世</h4><p>穿越·完结</p></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><span class="section-title">📚 新书上架</span><span class="section-more">更多 <i class="fas fa-chevron-right"></i></span></div>
+        <div class="book-list">
+          <div class="book-item" onclick="goPage('detail')"><div class="book-cover-sm" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><div class="book-info"><h4>绝代医仙在都市</h4><p>一代医仙重生都市，左手医术右手修仙，纵横都市，所向披靡。</p><div class="book-meta"><span>都市·连载</span><span class="price">¥2.00/千字</span></div></div></div>
+          <div class="book-item" onclick="goPage('detail')"><div class="book-cover-sm" style="background:linear-gradient(135deg,#f093fb,#f5576c)"></div><div class="book-info"><h4>甜妻她超凶萌</h4><p>一场阴谋，她被迫替嫁，本以为从此是路人，却不想被他宠上天。</p><div class="book-meta"><span>现代·连载</span><span class="price">¥1.50/千字</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="page-shelf" class="page">
+    <div class="shelf-header"><h2>我的书架</h2><span class="shelf-edit">编辑</span></div>
+    <div class="shelf-tabs">
+      <div class="shelf-tab active">收藏</div>
+      <div class="shelf-tab">最近阅读</div>
+    </div>
+    <div class="shelf-content">
+      <div class="shelf-grid">
+        <div class="shelf-book" onclick="goPage('reader')"><div class="shelf-cover" style="background:linear-gradient(135deg,#667eea,#764ba2)"></div><h4>逆袭人生</h4><p>读到 第120章</p></div>
+        <div class="shelf-book" onclick="goPage('reader')"><div class="shelf-cover" style="background:linear-gradient(135deg,#f093fb,#f5576c)"></div><h4>总裁大人</h4><p>读到 第58章</p></div>
+        <div class="shelf-book" onclick="goPage('reader')"><div class="shelf-cover" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"></div><h4>仙武帝尊</h4><p>读到 第200章</p></div>
+      </div>
+    </div>
+  </div>
+  <div id="page-search" class="page">
+    <div class="search-header">
+      <div class="search-box"><i class="fas fa-search"></i><input type="text" placeholder="搜索书名或作者" id="search-input"></div>
+      <span class="search-cancel" onclick="goPage('home')">取消</span>
+    </div>
+    <div class="search-hot">
+      <h3>🔥 热门搜索</h3>
+      <div class="hot-tags">
+        <span class="hot-tag" onclick="showToast('搜索: 逆袭人生')">逆袭人生</span>
+        <span class="hot-tag" onclick="showToast('搜索: 总裁大人')">总裁大人</span>
+        <span class="hot-tag" onclick="showToast('搜索: 仙武帝尊')">仙武帝尊</span>
+        <span class="hot-tag" onclick="showToast('搜索: 甜妻')">甜妻</span>
+        <span class="hot-tag" onclick="showToast('搜索: 穿越')">穿越</span>
+        <span class="hot-tag" onclick="showToast('搜索: 都市')">都市</span>
+      </div>
+    </div>
+  </div>
+  <div id="page-detail" class="page">
+    <div class="detail-header">
+      <i class="fas fa-chevron-left detail-back" onclick="goPage('home')"></i>
+      <div class="detail-info">
+        <div class="detail-cover"></div>
+        <div class="detail-meta"><h2>逆袭人生</h2><p>都市 · 完结 · 200万字</p><div class="detail-tags"><span class="detail-tag">都市</span><span class="detail-tag">热血</span><span class="detail-tag">爽文</span></div></div>
+      </div>
+    </div>
+    <div class="detail-content">
+      <div class="detail-card">
+        <p class="detail-desc" id="book-desc">屌丝青年李凡意外获得神秘传承，从此逆袭人生，走上巅峰。他左手医术，右手修仙，在都市中纵横驰骋，所向披靡。校花、空姐、女总裁，各路美女纷纷围绕，且看他如何书写传奇人生！</p>
+        <div class="detail-expand" onclick="toggleDesc()">展开阅读</div>
+      </div>
+      <div class="detail-card">
+        <div class="chapter-header"><h3>目录</h3><span>共300章</span></div>
+        <div class="chapter-list">
+          <div class="chapter-item free" onclick="goPage('reader')"><h4>第一章 意外继承</h4><span>免费</span></div>
+          <div class="chapter-item locked" onclick="showPayModal()"><h4>第二章 神秘老者</h4><span class="chapter-price">¥0.20</span></div>
+          <div class="chapter-item locked" onclick="showPayModal()"><h4>第三章 初次修炼</h4><span class="chapter-price">¥0.20</span></div>
+          <div class="chapter-item locked" onclick="showPayModal()"><h4>第四章 英雄救美</h4><span class="chapter-price">¥0.20</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-footer"><button class="btn-read" onclick="goPage('reader')">开始阅读</button><button class="btn-subscribe" onclick="showPayModal()">批量购买</button></div>
+  </div>
+  <div id="page-reader" class="page" style="padding:0;background:#faf8f5">
+    <div class="reader-header" id="reader-header">
+      <i class="fas fa-chevron-left reader-back" onclick="goPage('detail')"></i>
+      <span class="reader-title">第二章 神秘老者</span>
+      <div class="reader-actions"><i class="fas fa-list" onclick="toggleCatalog()"></i><i class="fas fa-font" onclick="showToast('字体设置')"></i></div>
+    </div>
+    <div class="reader-content" id="reader-content" onclick="toggleReaderUI()">
+      <p>李凡站在医院的走廊里，看着手中的诊断报告，心情复杂。</p>
+      <p>"李先生，很抱歉告诉您这个结果..."医生的声音还在耳边回响。</p>
+      <p>正当他绝望之际，一个神秘的老者出现在他面前。</p>
+      <p>"年轻人，我看你根骨不凡，可愿随我修行？"老者笑眯眯地说道。</p>
+      <p>李凡愣住了，这是遇到了骗子还是遇到了机遇？</p>
+      <p>"你我有缘，我可以教你一套养生之法。"老者说着，从怀中取出一本泛黄的古籍。</p>
+      <p>就这样，李凡的人生轨迹发生了翻天覆地的变化...</p>
+    </div>
+    <div class="reader-footer" id="reader-footer">
+      <div class="reader-btn"><i class="fas fa-chevron-left"></i><span>上一章</span></div>
+      <div class="reader-btn active" onclick="toggleCatalog()"><i class="fas fa-list"></i><span>目录</span></div>
+      <div class="reader-btn"><i class="fas fa-chevron-right"></i><span>下一章</span></div>
+    </div>
+  </div>
+  <div id="page-profile" class="page">
+    <div class="profile-header">
+      <div class="profile-info"><div class="profile-avatar"><i class="fas fa-user"></i></div><div class="profile-details"><div class="profile-name">游客用户</div><div class="profile-id">ID: 10086</div></div></div>
+      <div class="profile-balance">
+        <div class="balance-item"><h4>¥0.00</h4><p>书币余额</p></div>
+        <div class="balance-item"><h4>0</h4><p>已购章节</p></div>
+        <div class="balance-item"><h4>3</h4><p>收藏书籍</p></div>
+      </div>
+    </div>
+    <div class="profile-content">
+      <div class="profile-card">
+        <div class="order-header"><h4>我的订单</h4><span>全部 <i class="fas fa-chevron-right"></i></span></div>
+        <div class="order-list">
+          <div class="order-item"><i class="fas fa-clock"></i><span>待支付</span></div>
+          <div class="order-item"><i class="fas fa-check-circle"></i><span>已完成</span></div>
+          <div class="order-item"><i class="fas fa-undo"></i><span>退款</span></div>
+        </div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-menu">
+          <div class="profile-menu-item"><i class="fas fa-bookmark"></i><span>收藏</span></div>
+          <div class="profile-menu-item"><i class="fas fa-history"></i><span>阅读记录</span></div>
+          <div class="profile-menu-item"><i class="fas fa-wallet"></i><span>充值</span></div>
+          <div class="profile-menu-item"><i class="fas fa-cog"></i><span>设置</span></div>
+          <div class="profile-menu-item"><i class="fas fa-headset"></i><span>客服</span></div>
+          <div class="profile-menu-item"><i class="fas fa-question-circle"></i><span>帮助</span></div>
+        </div>
+      </div>
+      <div class="profile-card">
+        <div class="profile-menu-item" style="width:100%;justify-content:flex-start" onclick="showToast('登录 / 注册')">
+          <i class="fas fa-sign-in-alt" style="color:var(--primary);margin-right:12px"></i>
+          <span style="color:var(--primary)">登录 / 注册</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab(this,'home')"><i class="fas fa-home"></i><span>首页</span></div>
+    <div class="tab-item" onclick="switchTab(this,'shelf')"><i class="fas fa-book"></i><span>书架</span></div>
+    <div class="tab-item" onclick="switchTab(this,'search')"><i class="fas fa-search"></i><span>搜索</span></div>
+    <div class="tab-item" onclick="switchTab(this,'profile')"><i class="fas fa-user"></i><span>我的</span></div>
+  </div>
+  <div class="catalog-panel" id="catalog-panel">
+    <div class="catalog-header"><h3>目录</h3><i class="fas fa-times catalog-close" onclick="toggleCatalog()"></i></div>
+    <div class="catalog-item free current"><h4>第一章 意外继承</h4><span>免费</span></div>
+    <div class="catalog-item locked"><h4>第二章 神秘老者</h4><span class="chapter-price">¥0.20</span></div>
+    <div class="catalog-item locked"><h4>第三章 初次修炼</h4><span class="chapter-price">¥0.20</span></div>
+    <div class="catalog-item locked"><h4>第四章 英雄救美</h4><span class="chapter-price">¥0.20</span></div>
+    <div class="catalog-item locked"><h4>第五章 医院冲突</h4><span class="chapter-price">¥0.20</span></div>
+    <div class="catalog-item locked"><h4>第六章 惊人发现</h4><span class="chapter-price">¥0.20</span></div>
+  </div>
+  <div class="pay-modal" id="pay-modal">
+    <div class="pay-content">
+      <div class="pay-header"><h3>购买章节</h3><i class="fas fa-times pay-close" onclick="hidePayModal()"></i></div>
+      <div class="pay-amount"><span>¥0.20</span></div>
+      <div class="pay-methods">
+        <div class="pay-method selected" onclick="selectPayMethod(this)"><i class="fas fa-comment wechat"></i><span>微信支付</span><div class="radio"></div></div>
+        <div class="pay-method" onclick="selectPayMethod(this)"><i class="fas fa-credit-card alipay"></i><span>支付宝</span><div class="radio"></div></div>
+      </div>
+      <button class="pay-btn" onclick="showToast('支付功能开发中')">确认支付 ¥0.20</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    function goPage(page){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+page).classList.add('active');if(page==='reader'){document.querySelector('.tab-bar').style.display='none'}else{document.querySelector('.tab-bar').style.display='flex'}}
+    function switchTab(el,page){document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));el.classList.add('active');goPage(page)}
+    function filterTag(el){document.querySelectorAll('.tag').forEach(t=>t.classList.remove('active'));el.classList.add('active')}
+    function toggleDesc(){var d=document.getElementById('book-desc');d.classList.toggle('expanded');d.nextElementSibling.textContent=d.classList.contains('expanded')?'收起':'展开阅读'}
+    function toggleCatalog(){document.getElementById('catalog-panel').classList.toggle('show')}
+    function toggleReaderUI(){var h=document.getElementById('reader-header');var f=document.getElementById('reader-footer');h.classList.toggle('hidden');f.classList.toggle('hidden')}
+    function showPayModal(){document.getElementById('pay-modal').classList.add('show')}
+    function hidePayModal(){document.getElementById('pay-modal').classList.remove

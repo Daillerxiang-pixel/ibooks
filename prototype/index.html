@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>iBooks - 小说阅读器</title>
+<link rel="stylesheet" href="https://unpkg.com/vant@4/lib/index.css">
+<style>
+:root {
+  --primary: #FF6B35;
+  --primary-light: #FF8A5C;
+  --primary-dark: #E55A2B;
+  --bg: #F5F5F5;
+  --card-bg: #FFFFFF;
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B7280;
+  --text-hint: #9CA3AF;
+  --border: #F0F0F0;
+  --gold: #F59E0B;
+  --tag-bg: #FFF3E0;
+  --tag-text: #FF6B35;
+  --success: #10B981;
+  --danger: #EF4444;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ===== Page Container ===== */
+.page {
+  display: none;
+  min-height: 100vh;
+  padding-bottom: 70px;
+  animation: fadeIn 0.25s ease;
+}
+.page.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInBg {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== Bottom Tab Bar ===== */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  height: 64px;
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-hint);
+  cursor: pointer;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px 12px;
+}
+.tab-item.active { color: var(--primary); }
+.tab-item svg { width: 24px; height: 24px; }
+
+/* ===== Home Page ===== */
+.home-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  padding: 16px 16px 20px;
+  color: white;
+}
+.home-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 8px 14px;
+  gap: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+.search-bar span { font-size: 14px; opacity: 0.8; }
+.search-bar svg { width: 18px; height: 18px; opacity: 0.8; }
+
+.section {
+  padding: 16px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title .more {
+  font-size: 12px;
+  color: var(--text-hint);
+  font-weight: 400;
+}
+
+/* Category Tags */
+.category-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 16px 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.category-scroll::-webkit-scrollbar { display: none; }
+.cat-tag {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.cat-tag.active, .cat-tag:active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* Book Cards */
+.book-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 16px 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.book-scroll::-webkit-scrollbar { display: none; }
+.book-card {
+  flex-shrink: 0;
+  width: 110px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.book-card:active { transform: scale(0.97); }
+.book-cover {
+  width: 110px;
+  height: 150px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  position: relative;
+}
+.book-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.book-cover .tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--primary);
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.book-card .title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-card .author {
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-top: 2px;
+}
+
+/* New Books List */
+.new-book-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  align-items: center;
+}
+.new-book-item:last-child { border-bottom: none; }
+.new-book-cover {
+  width: 64px;
+  height: 86px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.new-book-cover img { width: 100%; height: 100%; object-fit: cover; }
+.new-book-info { flex: 1; min-width: 0; }
+.new-book-info .title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.new-book-info .author {
+  font-size: 12px;
+  color: var(--text-hint);
+  margin-top: 4px;
+}
+.new-book-info .desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.5;
+}
+.new-book-info .meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-hint);
+}
+.new-book-info .meta .cat {
+  color: var(--primary);
+  font-size: 11px;
+  background: var(--tag-bg);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* ===== Bookshelf Page ===== */
+.shelf-header {
+  background: var(--card-bg);
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.shelf-tabs {
+  display: flex;
+  gap: 24px;
+}
+.shelf-tab {
+  font-size: 15px;
+  color: var(--text-hint);
+  padding-bottom: 8px;
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+}
+.shelf-tab.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.shelf-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+.shelf-book {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.shelf-book:active { transform: scale(0.96); }
+.shelf-book .cover {
+  width: 100%;
+  aspect-ratio: 3/4;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  position: relative;
+}
+.shelf-book .cover img { width: 100%; height: 100%; object-fit: cover; }
+.shelf-book .cover .progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0,0,0,0.3);
+}
+.shelf-book .cover .progress-bar .fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 0 2px 0 0;
+}
+.shelf-book .name {
+  font-size: 12px;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.shelf-book .progress-text {
+  font-size: 10px;
+  color: var(--text-hint);
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ===== Search Page ===== */
+.search-page {
+  background: var(--bg);
+  padding-top: 0;
+}
+.search-top {
+  background: var(--card-bg);
+  padding: 12px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 20px;
+  padding: 8px 14px;
+  gap: 8px;
+}
+.search-input-wrap input {
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  color: var(--text-primary);
+}
+.search-input-wrap input::placeholder { color: var(--text-hint); }
+.search-input-wrap svg { width: 18px; height: 18px; color: var(--text-hint); flex-shrink: 0; }
+.search-cancel {
+  font-size: 14px;
+  color: var(--primary);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 8px;
+}
+.search-history, .search-hot {
+  padding: 16px;
+}
+.search-history-title, .search-hot-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.search-history-title .clear { font-size: 12px; color: var(--text-hint); font-weight: 400; cursor: pointer; }
+.hot-list { list-style: none; }
+.hot-list li {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  cursor: pointer;
+}
+.hot-list li:last-child { border-bottom: none; }
+.hot-list .rank {
+  width: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-hint);
+  text-align: center;
+}
+.hot-list li:nth-child(1) .rank, .hot-list li:nth-child(2) .rank, .hot-list li:nth-child(3) .rank {
+  color: var(--primary);
+}
+.hot-list .word { font-size: 14px; flex: 1; }
+.hot-list .count { font-size: 11px; color: var(--text-hint); }
+
+/* ===== Book Detail Page ===== */
+.detail-page {
+  background: var(--bg);
+  padding-bottom: 80px !important;
+}
+.detail-header {
+  background: var(--card-bg);
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+}
+.detail-cover {
+  width: 100px;
+  height: 136px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+.detail-cover img { width: 100%; height: 100%; object-fit: cover; }
+.detail-meta { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.detail-meta .book-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.detail-meta .book-author {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.detail-meta .book-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+.detail-meta .stat {
+  font-size: 12px;
+  color: var(--text-hint);
+}
+.detail-meta .stat strong { color: var(--text-primary); }
+.detail-meta .book-tags { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.detail-meta .book-tags span {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+}
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--card-bg);
+}
+.btn-fav {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-fav svg { width: 20px; height: 20px; color: var(--text-hint); }
+.btn-fav.active svg { color: var(--primary); }
+.btn-read {
+  flex: 1;
+  height: 44px;
+  border-radius: 22px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(255,107,53,0.3);
+}
+.btn-read:active { transform: scale(0.97); }
+
+.detail-section {
+  background: var(--card-bg);
+  margin-top: 10px;
+  padding: 16px;
+}
+.detail-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.detail-desc {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s;
+}
+.detail-desc.collapsed { max-height: 72px; }
+.detail-desc.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(transparent, white);
+}
+.detail-desc .expand-btn {
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.toc-list { list-style: none; }
+.toc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.toc-item:last-child { border-bottom: none; }
+.toc-item .ch-name { font-size: 14px; }
+.toc-item .ch-price {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.toc-item .ch-price.free { color: var(--success); background: #ECFDF5; }
+.toc-item .ch-price.paid { color: var(--primary); background: var(--tag-bg); }
+.toc-item .ch-price.locked { color: var(--text-hint); background: var(--bg); }
+
+.detail-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  background: var(--card-bg);
+  padding: 10px 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  z-index: 100;
+}
+.detail-bottom-bar .coin-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.detail-bottom-bar .coin-info svg { width: 16px; height: 16px; color: var(--gold); }
+.detail-bottom-bar .btn-batch {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.detail-bottom-bar .btn-start {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== Reader Page ===== */
+.reader-page {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
+  height: 100dvh;
+  background: #FAF6EF;
+  display: none;
+  flex-direction: column;
+  z-index: 200;
+  overflow: hidden;
+}
+.reader-page.active { display: flex; }
+.reader-page.dark-mode { background: #1A1A2E; color: #D1D5DB; }
+
+.reader-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(250,246,239,0.95);
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  transition: transform 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.reader-page.dark-mode .reader-top { background: rgba(26,26,46,0.95); color: #D1D5DB; }
+.reader-top.hidden { transform: translateY(-100%); }
+.reader-top .back-btn { display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer; }
+.reader-top .back-btn svg { width: 20px; height: 20px; }
+.reader-top .chapter-title { font-size: 14px; font-weight: 500; flex: 1; text-align: center; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reader-top .top-actions { display: flex; gap: 16px; }
+.reader-top .top-actions svg { width: 20px; height: 20px; cursor: pointer; opacity: 0.7; }
+
+.reader-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 60px 20px 80px;
+  font-size: 16px;
+  line-height: 2;
+  letter-spacing: 0.5px;
+  -webkit-overflow-scrolling: touch;
+}
+.reader-content h2 {
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+.reader-content p {
+  text-indent: 2em;
+  margin-bottom: 16px;
+}
+
+.reader-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(250,246,239,0.95);
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 10;
+  transition: transform 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.reader-page.dark-mode .reader-bottom { background: rgba(26,26,46,0.95); color: #D1D5DB; }
+.reader-bottom.hidden { transform: translateY(100%); }
+.reader-bottom .nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+.reader-bottom .nav-btn:active { background: rgba(0,0,0,0.05); }
+.reader-bottom .nav-btn svg { width: 18px; height: 18px; }
+
+/* ===== Profile Page ===== */
+.profile-header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  padding: 24px 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: white;
+}
+.profile-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.5);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-info .name { font-size: 18px; font-weight: 600; }
+.profile-info .id { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+
+.profile-stats {
+  display: flex;
+  background: var(--card-bg);
+  margin: -16px 16px 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 0;
+  position: relative;
+  z-index: 1;
+}
+.profile-stat {
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+}
+.profile-stat .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.profile-stat .label {
+  font-size: 12px;
+  color: var(--text-hint);
+  margin-top: 2px;
+}
+.profile-stat + .profile-stat {
+  border-left: 1px solid var(--border);
+}
+
+.profile-menu {
+  background: var(--card-bg);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--border);
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { background: var(--bg); }
+.menu-item svg { width: 20px; height: 20px; color: var(--primary); }
+.menu-item .menu-text { flex: 1; font-size: 14px; }
+.menu-item .menu-arrow { color: var(--text-hint); font-size: 12px; }
+
+/* ===== Pay Modal ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeInBg 0.2s ease;
+}
+.modal-overlay.active { display: flex; }
+
+.pay-modal {
+  width: 100%;
+  max-width: 430px;
+  background: var(--card-bg);
+  border-radius: 16px 16px 0 0;
+  padding: 0 0 env(safe-area-inset-bottom, 0);
+  animation: slideUp 0.3s ease;
+}
+.pay-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.pay-modal-header h3 { font-size: 16px; font-weight: 600; }
+.pay-modal-header .close-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-hint);
+}
+.pay-modal-header .close-btn svg { width: 20px; height: 20px; }
+.pay-modal-body { padding: 20px; }
+.pay-info {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 20px;
+}
+.pay-info .label { font-size: 12px; color: var(--text-hint); margin-bottom: 4px; }
+.pay-info .detail { font-size: 14px; font-weight: 500; }
+.pay-info .price {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 8px;
+}
+.pay-info .price span { font-size: 14px; font-weight: 400; }
+.pay-methods { margin-bottom: 20px; }
+.pay-methods .title { font-size: 14px; font-weight: 500; margin-bottom: 10px; }
+.pay-method {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.pay-method.selected { border-color: var(--primary); }
+.pay-method .icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+.pay-method .icon.wechat { background: #07C160; }
+.pay-method .icon.alipay { background: #1677FF; }
+.pay-method .method-name { flex: 1; font-size: 14px; font-weight: 500; }
+.pay-method .radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pay-method.selected .radio {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.pay-method.selected .radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+.pay-confirm-btn {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255,107,53,0.3);
+  transition: transform 0.2s;
+}
+.pay-confirm-btn:active { transform: scale(0.98); }
+
+/* ===== Back Button (for sub pages) ===== */
+.back-header {
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+}
+.back-header svg { width: 22px; height: 22px; cursor: pointer; color: var(--text-primary); }
+.back-header .header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  margin-right: 22px;
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-hint);
+}
+.empty-state svg { width: 80px; height: 80px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state .text { font-size: 14px; }
+
+/* Font Size Modal */
+.font-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 250;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.font-modal.active { display: flex; }
+.font-modal-content {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  animation: slideUp 0.3s ease;
+}
+.font-modal-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.font-size-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.font-size-control button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.font-size-control .size-preview {
+  font-size: 18px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: center;
+}
+.theme-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.theme-opt {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.theme-opt.active { border-color: var(--primary); }
+.theme-opt.light { background: #FAF6EF; }
+.theme-opt.dark { background: #1A1A2E; }
+.theme-opt.green { background: #E8F5E9; }
+</style>
+</head>
+<body>
+
+<!-- ========== HOME PAGE ========== -->
+<div class="page active" id="page-home">
+  <div class="home-header">
+    <h1>
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      iBooks
+    </h1>
+    <div class="search-bar" onclick="switchPage('page-search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span>搜索小说、作者...</span>
+    </div>
+  </div>
+
+  <div class="category-scroll">
+    <div class="cat-tag active">全部</div>
+    <div class="cat-tag">都市</div>
+    <div class="cat-tag">玄幻</div>
+    <div class="cat-tag">修仙</div>
+    <div class="cat-tag">穿越</div>
+    <div class="cat-tag">总裁</div>
+    <div class="cat-tag">悬疑</div>
+    <div class="cat-tag">科幻</div>
+    <div class="cat-tag">历史</div>
+    <div class="cat-tag">军事</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔥 热门推荐 <span class="more">查看更多 ›</span></div>
+  </div>
+  <div class="book-scroll">
+    <div class="book-card" onclick="openDetail()">
+      <div class="book-cover">
+        <img src="https://picsum.photos/seed/book1/220/300" alt="">
+        <span class="tag">HOT</span>
+      </div>
+      <div class="title">重生之都市修仙</div>
+      <div class="author">十里剑神</div>
+    </div>
+    <div class="book-card" onclick="openDetail()">
+      <div class="book-cover">
+        <img src="https://picsum.photos/seed/book2/220/300" alt="">
+        <span class="tag">NEW</span>
+      </div>
+      <div class="title">万古仙穹</div>
+      <div class="author">观棋</div>
+    </div>
+    <div class="book-card" onclick="openDetail()">
+      <div class="book-cover">
+        <img src="https://picsum.photos/seed/book3/220/300" alt="">
+      </div>
+      <div class="title">逆天邪神</div>
+      <div class="author">火星引力</div>
+    </div>
+    <div class="book-card" onclick="openDetail()">
+      <div class="book-cover">
+        <img src="https://picsum.photos/seed/book4/220/300" alt="">
+      </div>
+      <div class="title">斗破苍穹</div>
+      <div class="author">天蚕土豆</div>
+    </div>
+    <div class="book-card" onclick="openDetail()">
+      <div class="book-cover">
+        <img src="https://picsum.photos/seed/book5/220/300" alt="">
+        <span class="tag">HOT</span>
+      </div>
+      <div class="title">完美世界</div>
+      <div class="author">辰东</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📖 新书上架 <span class="more">查看更多 ›</span></div>
+  </div>
+  <div style="padding: 0 16px;">
+    <div class="new-book-item" onclick="openDetail()">
+      <div class="new-book-cover"><img src="https://picsum.photos/seed/new1/128/172" alt=""></div>
+      <div class="new-book-info">
+        <div class="title">仙道第一小白脸</div>
+        <div class="author">落叶无言</div>
+        <div class="desc">少年意外获得仙道传承，从此踏上修仙之路，在都市与仙界之间纵横捭阖...</div>
+        <div class="meta">
+          <span class="cat">都市</span>
+          <span>186万字</span>
+          <span>连载中</span>
+        </div>
+      </div>
+    </div>
+    <div class="new-book-item" onclick="openDetail()">
+      <div class="new-book-cover"><img src="https://picsum.photos/seed/new2/128/172" alt=""></div>
+      <div class="new-book-info">
+        <div class="title">全球高武</div>
+        <div class="author">老鹰吃小鸡</div>
+        <div class="desc">平行世界，武道崛起，资源匮乏，武者成为时代的主旋律...</div>
+        <div class="meta">
+          <span class="cat">玄幻</span>
+          <span>328万字</span>
+          <span>已完结</span>
+        </div>
+      </div>
+    </div>
+    <div class="new-book-item" onclick="openDetail()">
+      <div class="new-book-cover"><img src="https://picsum.photos/seed/new3/128/172" alt=""></div>
+      <div class="new-book-info">
+        <div class="title">大国重工</div>
+        <div class="author">齐橙</div>
+        <div class="desc">穿越回1980年，成为一家拖拉机厂的技术员，从零开始打造中国重工...</div>
+        <div class="meta">
+          <span class="cat">历史</span>
+          <span>456万字</span>
+          <span>已完结</span>
+        </div>
+      </div>
+    </div>
+    <div class="new-book-item" onclick="openDetail()">
+      <div class="new-book-cover"><img src="https://picsum.photos/seed/new4/128/172" alt=""></div>
+      <div class="new-book-info">
+        <div class="title">绝世武神</div>
+        <div class="author">净无痕</div>
+        <div class="desc">少年林枫，丹田如铁，无法修炼。一场意外让他获得太古魔尊的传承...</div>
+        <div class="meta">
+          <span class="cat">玄幻</span>
+          <span>572万字</span>
+          <span>已完结</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== BOOKSHELF PAGE ========== -->
+<div class="page" id="page-shelf">
+  <div class="shelf-header">
+    <div class="shelf-tabs">
+      <div class="shelf-tab active" onclick="switchShelfTab(this)">最近阅读</div>
+      <div class="shelf-tab" onclick="switchShelfTab(this)">我的收藏</div>
+    </div>
+  </div>
+  <div class="shelf-grid" id="shelf-recent">
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf1/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:72%"></div></div>
+      </div>
+      <div class="name">重生之都市修仙</div>
+      <div class="progress-text">读到 72%</div>
+    </div>
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf2/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:35%"></div></div>
+      </div>
+      <div class="name">万古仙穹</div>
+      <div class="progress-text">读到 35%</div>
+    </div>
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf3/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:91%"></div></div>
+      </div>
+      <div class="name">逆天邪神</div>
+      <div class="progress-text">读到 91%</div>
+    </div>
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf4/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:15%"></div></div>
+      </div>
+      <div class="name">斗破苍穹</div>
+      <div class="progress-text">读到 15%</div>
+    </div>
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf5/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:58%"></div></div>
+      </div>
+      <div class="name">完美世界</div>
+      <div class="progress-text">读到 58%</div>
+    </div>
+    <div class="shelf-book" onclick="openReader()">
+      <div class="cover">
+        <img src="https://picsum.photos/seed/shelf6/300/400" alt="">
+        <div class="progress-bar"><div class="fill" style="width:42%"></div></div>
+      </div>
+      <div class="name">全球高武</div>
+      <div class="progress-text">读到 42%</div>
+    </div>
+  </div>
+  <div class="shelf-grid" id="shelf-fav" style="display:none;">
+    <div class="shelf-book" onclick="openDetail()">
+      <div class="cover"><img src="https://picsum.photos/seed/fav1/300/400" alt=""></div>
+      <div class="name">大国重工</div>
+      <div class="progress-text">456万字 · 已完结</div>
+    </div>
+    <div class="shelf-book" onclick="openDetail()">
+      <div class="cover"><img src="https://picsum.photos/seed/fav2/300/400" alt=""></div>
+      <div class="name">仙道第一小白脸</div>
+      <div class="progress-text">186万字 · 连载中</div>
+    </div>
+    <div class="shelf-book" onclick="openDetail()">
+      <div class="cover"><img src="https://picsum.photos/seed/fav3/300/400" alt=""></div>
+      <div class="name">绝世武神</div>
+      <div class="progress-text">572万字 · 已完结</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SEARCH PAGE ========== -->
+<div class="page search-page" id="page-search">
+  <div class="search-top">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" placeholder="搜索小说、作者" autofocus>
+    </div>
+    <div class="search-cancel" onclick="switchPage('page-home')">取消</div>
+  </div>
+
+  <div class="search-history">
+    <div class="search-history-title">搜索历史 <span class="clear">🗑 清空</span></div>
+    <ul class="hot-list">
+      <li><span class="rank">1</span><span class="word">重生</span></li>
+      <li><span class="rank">2</span><span class="word">都市修仙</span></li>
+      <li><span class="rank">3</span><span class="word">玄幻</span></li>
+    </ul>
+  </div>
+
+  <div class="search-hot">
+    <div class="search-hot-title">🔥 热门搜索</div>
+    <ul class="hot-list">
+      <li><span class="rank">1</span><span class="word">重生之都市修仙</span><span class="count">128万</span></li>
+      <li><span class="rank">2</span><span class="word">万古仙穹</span><span class="count">96万</span></li>
+      <li><span class="rank">3</span><span class="word">逆天邪神</span><span class="count">87万</span></li>
+      <li><span class="rank">4</span><span class="word">斗破苍穹</span><span class="count">82万</span></li>
+      <li><span class="rank">5</span><span class="word">完美世界</span><span class="count">76万</span></li>
+      <li><span class="rank">6</span><span class="word">全球高武</span><span class="count">63万</span></li>
+      <li><span class="rank">7</span><span class="word">绝世武神</span><span class="count">55万</span></li>
+      <li><span class="rank">8</span><span class="word">大国重工</span><span class="count">42万</span></li>
+      <li><span class="rank">9</span><span class="word">仙道第一小白脸</span><span class="count">38万</span></li>
+      <li><span class="rank">10</span><span class="word">修仙归来在都市</span><span class="count">31万</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ========== BOOK DETAIL PAGE ========== -->
+<div class="page detail-page" id="page-detail">
+  <div class="back-header">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="goBack()"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    <span class="header-title">书籍详情</span>
+  </div>
+
+  <div class="detail-header">
+    <div class="detail-cover">
+      <img src="https://picsum.photos/seed/book1/200/272" alt="">
+    </div>
+    <div class="detail-meta">
+      <div class="book-title">重生之都市修仙</div>
+      <div class="book-author">十里剑神</div>
+      <div class="book-stats">
+        <div class="stat"><strong>186</strong>万字</div>
+        <div class="stat"><strong>9823</strong>在读</div>
+        <div class="stat">⭐ <strong>9.2</strong></div>
+      </div>
+      <div class="book-tags">
+        <span>都市</span>
+        <span>修仙</span>
+        <span>连载中</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-actions">
+    <div class="btn-fav" id="favBtn" onclick="toggleFav()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+    </div>
+    <button class="btn-read" onclick="openReader()">开始阅读</button>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">简介</div>
+    <div class="detail-desc collapsed" id="bookDesc">
+      修仙归来，重回都市。上一世我仙途坎坷，这一世我要逆天改命！少年陈默在渡劫时被人暗算，陨落重生回到十八年前。带着前世记忆和修仙功法，他决定弥补遗憾，保护家人，站在这个世界的巅峰。且看一个修仙者如何在都市中翻手为云覆手为雨，重走巅峰之路！
+      <span class="expand-btn" onclick="toggleDesc()">展开 ›</span>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">目录 <span style="font-size:12px;color:var(--text-hint);font-weight:400;">共 1,286 章</span></div>
+    <ul class="toc-list">
+      <li class="toc-item">
+        <span class="ch-name">第1章 重生归来</span>
+        <span class="ch-price free">免费</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第2章 前世记忆</span>
+        <span class="ch-price free">免费</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第3章 家人重逢</span>
+        <span class="ch-price free">免费</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第4章 初入校园</span>
+        <span class="ch-price free">免费</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第5章 暗流涌动</span>
+        <span class="ch-price free">免费</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第6章 宿敌登场</span>
+        <span class="ch-price paid">5 书币</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第7章 初露锋芒</span>
+        <span class="ch-price paid">5 书币</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第8章 灵气复苏</span>
+        <span class="ch-price paid">5 书币</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第9章 突破筑基</span>
+        <span class="ch-price paid">5 书币</span>
+      </li>
+      <li class="toc-item">
+        <span class="ch-name">第10章 风起云涌</span>
+        <span class="ch-price paid">5 书币</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="detail-bottom-bar">
+    <div class="coin-info">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" fill="white" font-weight="700">$</text></svg>
+      余额: 128
+    </div>
+    <button class="btn-batch" onclick="openPayModal('batch')">批量购买</button>
+    <button class="btn-start" onclick="openReader()">开始阅读</button>
+  </div>
+</div>
+
+<!-- ========== READER PAGE ========== -->
+<div class="reader-page" id="reader-page">
+  <div class="reader-top" id="reader-top">
+    <div class="back-btn" onclick="closeReader()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      返回
+    </div>
+    <div class="chapter-title">第6章 宿敌登场</div>
+    <div class="top-actions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="toggleReaderToc()"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="openFontModal()"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+    </div>
+  </div>
+
+  <div class="reader-content" id="reader-content" onclick="toggleReaderUI()">
+    <h2>第六章 宿敌登场</h2>
+    <p>清晨的阳光透过窗帘的缝隙洒进房间，陈默缓缓睁开了双眼。看着熟悉的天花板，他嘴角微微上扬——重生，这不是梦。</p>
+    <p>十八年前，他只是一个普通人。而现在，他拥有了千年的修仙经验和完整的功法传承。上一世那些没能保护的人，这一次，他绝不会让悲剧重演。</p>
+    <p>"默儿，起床了！今天开学第一天，别迟到！"门外传来母亲温柔的声音。陈默的眼眶微微泛红，上辈子母亲因为一场意外早早离世，成了他心中永远的痛。</p>
+    <p>"知道了，妈。"他深吸一口气，压下心中的激动，起身洗漱。</p>
+    <p>走在通往学校的路上，陈默的神识悄然铺开。虽然现在实力低微，但感知方圆百米还是轻而易举。突然，他的脚步一顿。</p>
+    <p>前方的人群中，一个身影让他瞳孔微缩——林天佑。前世害他家破人亡的罪魁祸首之一，没想到这一世这么早就出现了。</p>
+    <p>"有意思……"陈默嘴角勾起一抹冷笑，"上辈子你给了我一场噩梦，这辈子，该轮到你了。"</p>
+    <p>他没有急于行动。修仙之路，最忌心浮气躁。当务之急是恢复实力，毕竟筑基期之前的修炼才是最关键的阶段。</p>
+  </div>
+
+  <div class="reader-bottom" id="reader-bottom">
+    <div class="nav-btn" onclick="prevChapter()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      上一章
+    </div>
+    <div class="nav-btn" onclick="toggleReaderToc()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+      目录
+    </div>
+    <div class="nav-btn" onclick="nextChapter()">
+      下一章
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PROFILE PAGE ========== -->
+<div class="page" id="page-profile">
+  <div class="profile-header">
+    <div class="profile-avatar">
+      <img src="https://picsum.photos/seed/avatar/120/120" alt="">
+    </div>
+    <div class="profile-info">
+      <div class="name">书虫小王</div>
+      <div class="id">ID: 2026040001</div>
+    </div>
+  </div>
+
+  <div class="profile-stats">
+    <div class="profile-stat" onclick="openPayModal()">
+      <div class="value">128</div>
+      <div class="label">书币余额</div>
+    </div>
+    <div class="profile-stat">
+      <div class="value">23</div>
+      <div class="label">已购章节</div>
+    </div>
+    <div class="profile-stat">
+      <div class="value">6</div>
+      <div class="label">我的收藏</div>
+    </div>
+  </div>
+
+  <div class="profile-menu">
+    <div class="menu-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      <span class="menu-text">我的订单</span>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      <span class="menu-text">我的收藏</span>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="menu-text">阅读记录</span>
+      <span class="menu-arrow">›</span>
+    </div>
+  </div>
+
+  <div class="profile-menu">
+    <div class="menu-item" onclick="openPayModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span class="menu-text">充值书币</span>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="menu-text">设置</span>
+      <span class="menu-arrow">›</span>
+    </div>
+    <div class="menu-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span class="menu-text">联系客服</span>
+      <span class="menu-arrow">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAY MODAL ========== -->
+<div class="modal-overlay" id="payModal">
+  <div class="pay-modal">
+    <div class="pay-modal-header">
+      <h3>确认支付</h3>
+      <div class="close-btn" onclick="closePayModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="pay-modal-body">
+      <div class="pay-info">
+        <div class="label">购买内容</div>
+        <div class="detail" id="payItem">《重生之都市修仙》第6-10章</div>
+        <div class="price"><span>¥ </span>2.50</div>
+      </div>
+      <div class="pay-methods">
+        <div class="title">选择支付方式</div>
+        <div class="pay-method selected" onclick="selectPay(this)">
+          <div class="icon wechat">W</div>
+          <span class="method-name">微信支付</span>
+          <div class="radio"></div>
+        </div>
+        <div class="pay-method" onclick="selectPay(this)">
+          <div class="icon alipay">A</div>
+          <span class="method-name">支付宝</span>
+          <div class="radio"></div>
+        </div>
+      </div>
+      <button class="pay-confirm-btn" onclick="confirmPay()">确认支付 ¥2.50</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== FONT SIZE MODAL ========== -->
+<div class="font-modal" id="fontModal">
+  <div class="font-modal-content">
+    <h3>阅读设置</h3>
+    <div style="text-align:center;font-size:12px;color:var(--text-hint);margin-bottom:12px;">字体大小</div>
+    <div class="font-size-control">
+      <button onclick="changeFontSize(-1)">A-</button>
+      <div class="size-preview" id="fontSizeDisplay">16</div>
+      <button onclick="changeFontSize(1)">A+</button>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text-hint);margin-bottom:12px;">阅读主题</div>
+    <div class="theme-options">
+      <div class="theme-opt light active" onclick="changeTheme('light', this)"></div>
+      <div class="theme-opt dark" onclick="changeTheme('dark', this)"></div>
+      <div class="theme-opt green" onclick="changeTheme('green', this)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== BOTTOM TAB BAR ========== -->
+<div class="tab-bar" id="tabBar">
+  <div class="tab-item active" onclick="switchTab('page-home', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+    <span>首页</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('page-shelf', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    <span>书架</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('page-search', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span>搜索</span>
+  </div>
+  <div class="tab-item" onclick="switchTab('page-profile', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>我的</span>
+  </div>
+</div>
+
+<script>
+// ===== Page Navigation =====
+let currentPage = 'page-home';
+let previousPage = 'page-home';
+
+function switchTab(pageId, tabEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  currentPage = pageId;
+  document.getElementById('tabBar').style.display = 'flex';
+}
+
+function switchPage(pageId) {
+  previousPage = currentPage;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  currentPage = pageId;
+  
+  // Hide tab bar for detail page
+  if (pageId === 'page-detail') {
+    document.getElementById('tabBar').style.display = 'none';
+  } else {
+    document.getElementById('tabBar').style.display = 'flex';
+  }
+}
+
+function openDetail() {
+  switchPage('page-detail');
+}
+
+function goBack() {
+  switchPage(previousPage);
+}
+
+// ===== Category Tags =====
+document.querySelectorAll('.cat-tag').forEach(tag => {
+  tag.addEventListener('click', function() {
+    document.querySelectorAll('.cat-tag').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// ===== Bookshelf Tabs =====
+function switchShelfTab(tabEl) {
+  document.querySelectorAll('.shelf-tab').forEach(t => t.classList.remove('active'));
+  tabEl.classList.add('active');
+  const tabs = document.querySelectorAll('.shelf-tab');
+  const idx = Array.from(tabs).indexOf(tabEl);
+  document.getElementById('shelf-recent').style.display = idx === 0 ? 'grid' : 'none';
+  document.getElementById('shelf-fav').style.display = idx === 1 ? 'grid' : 'none';
+}
+
+// ===== Favorite Toggle =====
+function toggleFav() {
+  const btn = document.getElementById('favBtn');
+  btn.classList.toggle('active');
+  const svg = btn.querySelector('svg');
+  if (btn.classList.contains('active')) {
+    svg.setAttribute('fill', 'currentColor');
+    svg.setAttribute('stroke', 'currentColor');
+  } else {
+    svg.setAttribute('fill', 'none');
+  }
+}
+
+// ===== Description Expand =====
+function toggleDesc() {
+  const desc = document.getElementById('bookDesc');
+  desc.classList.toggle('collapsed');
+  const btn = desc.querySelector('.expand-btn');
+  if (desc.classList.contains('collapsed')) {
+    btn.textContent = '展开 ›';
+  } else {
+    btn.textContent = '收起 ‹';
+  }
+}
+
+// ===== Reader =====
+function openReader() {
+  document.getElementById('reader-page').classList.add('active');
+  document.getElementById('tabBar').style.display = 'none';
+}
+
+function closeReader() {
+  document.getElementById('reader-page').classList.remove('active');
+  if (currentPage === 'page-detail') {
+    document.getElementById('tabBar').style.display = 'none';
+  } else {
+    document.getElementById('tabBar').style.display = 'flex';
+  }
+}
+
+let readerUIVisible = true;
+function toggleReaderUI() {
+  readerUIVisible = !readerUIVisible;
+  document.getElementById('reader-top').classList.toggle('hidden', !readerUIVisible);
+  document.getElementById('reader-bottom').classList.toggle('hidden', !readerUIVisible);
+}
+
+function prevChapter() { /* navigate prev */ }
+function nextChapter() { /* navigate next */ }
+
+// ===== Font Size & Theme =====
+let currentFontSize = 16;
+
+function openFontModal() {
+  document.getElementById('fontModal').classList.add('active');
+  document.getElementById('fontModal').addEventListener('click', function handler(e) {
+    if (e.target === this) {
+      this.classList.remove('active');
+      this.removeEventListener('click', handler);
+    }
+  });
+}
+
+function changeFontSize(delta) {
+  currentFontSize = Math.max(12, Math.min(24, currentFontSize + delta));
+  document.getElementById('fontSizeDisplay').textContent = currentFontSize;
+  document.getElementById('reader-content').style.fontSize = currentFontSize + 'px';
+}
+
+function changeTheme(theme, el) {
+  const reader = document.getElementById('reader-page');
+  reader.classList.remove('dark-mode');
+  reader.style.background = '';
+  
+  document.querySelectorAll('.theme-opt').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  
+  if (theme === 'light') reader.style.background = '#FAF6EF';
+  else if (theme === 'dark') { reader.classList.add('dark-mode'); reader.style.background = '#1A1A2E'; }
+  else if (theme === 'green') reader.style.background = '#E8F5E9';
+}
+
+// ===== Payment Modal =====
+function openPayModal(type) {
+  document.getElementById('payModal').classList.add('active');
+  document.getElementById('payModal').addEventListener('click', function handler(e) {
+    if (e.target === this) {
+      this.classList.remove('active');
+      this.removeEventListener('click', handler);
+    }
+  });
+}
+
+function closePayModal() {
+  document.getElementById('payModal').classList.remove('active');
+}
+
+function selectPay(el) {
+  document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function confirmPay() {
+  closePayModal();
+  // Show success feedback
+  const btn = document.querySelector('.pay-confirm-btn');
+  btn.textContent = '支付成功 ✓';
+  btn.style.background = 'linear-gradient(135deg, #10B981, #34D399)';
+  setTimeout(() => {
+    btn.textContent = '确认支付 ¥2.50';
+    btn.style.background = '';
+  }, 2000);
+}
+
+function toggleReaderToc() {
+  // Could open a TOC overlay
+}
+</script>
+</body>
+</html>
