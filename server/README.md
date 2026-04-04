@@ -1,5 +1,7 @@
 # iBooks 后端 API 文档
 
+**生产环境部署（服务器路径、PM2、Nginx、Git 等）见仓库根目录 [docs/DEPLOY.md](../docs/DEPLOY.md)。**
+
 ## 项目信息
 - **技术栈**: Node.js + NestJS + TypeORM + SQLite
 - **端口**: 8081
