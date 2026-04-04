@@ -131,4 +131,23 @@ https://test.kanashortplay.com:8443/aihuantu/ibooks.git
 
 ---
 
+## 9. 与 ai-face-swap 测试环境同机（39.102.100.123）
+
+同一台公网服务器 **`39.102.100.123`** 上可能同时运行：
+
+| 服务 | 目录 | PM2 进程名 | 本机端口 | 对外域名（示例） |
+|------|------|------------|----------|------------------|
+| **iBooks**（本节） | `/var/www/ibooks` | `ibooks-server` | **8081** | 以实际 Nginx `server_name` 为准 |
+| **AI 换图测试** | `/var/www/ai-face-swap-test` | `ai-face-swap-test` | **8082** | `test1.kanashortplay.com` |
+
+**运维注意**：
+
+- 更新 **iBooks** 时，不要停止或修改 **`ai-face-swap-test`** 的 PM2 配置；反之亦然。
+- **不要**将 ai-face-swap 测试实例监听在 **8081**，以免与 iBooks 冲突。
+- Nginx 为各域名使用独立 `server` / 站点文件；新增站点时不应删除或覆盖其他项目的 `sites-enabled` 配置。
+
+ai-face-swap 测试环境权威说明见同工作区仓库 **`ai-face-swap`** 内文档：`docs/SERVER-DEPLOY.md`（§3 测试服务器）。
+
+---
+
 **文档更新说明**：若部署目录、分支名、域名或 Nginx 配置变更，请同步修改本节，并保留变更日期。
