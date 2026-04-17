@@ -6,6 +6,7 @@ import 'config/app_config.dart';
 import 'router/app_router.dart';
 import 'src/api/ibooks_api_client.dart';
 import 'src/data/ibooks_repository.dart';
+import 'src/data/reader_settings.dart';
 import 'src/data/session_controller.dart';
 import 'src/data/shelf_controller.dart';
 
@@ -19,6 +20,9 @@ Future<void> main() async {
   final shelf = ShelfController(repository: repo, session: session);
   await shelf.bootstrap();
 
+  final readerSettings = ReaderSettings();
+  await readerSettings.load();
+
   debugPrint('iBooks API: ${AppConfig.apiBaseUrl}');
 
   runApp(
@@ -28,6 +32,7 @@ Future<void> main() async {
         Provider<IbooksApiClient>.value(value: api),
         Provider<IbooksRepository>.value(value: repo),
         ChangeNotifierProvider<ShelfController>.value(value: shelf),
+        ChangeNotifierProvider<ReaderSettings>.value(value: readerSettings),
       ],
       child: IbooksApp(router: AppRouter.create()),
     ),
