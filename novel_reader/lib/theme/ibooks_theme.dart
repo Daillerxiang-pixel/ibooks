@@ -21,7 +21,7 @@ class IbTheme {
         displayColor: IbColors.ink,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: IbColors.bg.withValues(alpha: 0.94),
+        backgroundColor: IbColors.bg.withOpacity(0.94),
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -33,7 +33,7 @@ class IbTheme {
         iconTheme: const IconThemeData(color: IbColors.ink),
       ),
       dividerColor: IbColors.line,
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: IbColors.bgCard,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

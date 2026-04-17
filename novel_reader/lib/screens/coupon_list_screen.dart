@@ -36,7 +36,7 @@ class _CouponListScreenState extends State<CouponListScreen> {
                     onSelected: (_) => setState(() => _filter = i),
                     selectedColor: IbColors.accentSoft,
                     labelStyle: TextStyle(color: on ? IbColors.accent : IbColors.inkMuted, fontWeight: on ? FontWeight.w600 : FontWeight.w400),
-                    side: BorderSide(color: on ? IbColors.accent.withValues(alpha: 0.3) : IbColors.line),
+                    side: BorderSide(color: on ? IbColors.accent.withOpacity(0.3) : IbColors.line),
                     backgroundColor: IbColors.bgCard,
                   ),
                 );
@@ -105,7 +105,7 @@ class _CouponRow extends StatelessWidget {
             width: 28,
             height: 28,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: icoColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: icoColor.withOpacity(0.15), shape: BoxShape.circle),
             child: Text(ico, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: icoColor)),
           ),
         ],

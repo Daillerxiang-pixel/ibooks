@@ -183,7 +183,7 @@ class _HomeTabState extends State<HomeTab> {
               onSelected: (_) => setState(() => _chip = i),
               selectedColor: IbColors.accentSoft,
               labelStyle: TextStyle(color: on ? IbColors.accent : IbColors.inkMuted, fontWeight: on ? FontWeight.w600 : FontWeight.w400),
-              side: BorderSide(color: on ? IbColors.accent.withValues(alpha: 0.25) : IbColors.line),
+              side: BorderSide(color: on ? IbColors.accent.withOpacity(0.25) : IbColors.line),
               backgroundColor: IbColors.bgCard,
             );
           }),
@@ -264,7 +264,7 @@ class _HeroBanner extends StatelessWidget {
                 style: GoogleFonts.notoSerifTc(fontSize: 17.9, fontWeight: FontWeight.w600, color: Colors.white, height: 1.35),
               ),
               const SizedBox(height: 4),
-              Text('限時折扣 · 完結高分 · 海外繁體精校', style: GoogleFonts.notoSansTc(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.92))),
+              Text('限時折扣 · 完結高分 · 海外繁體精校', style: GoogleFonts.notoSansTc(fontSize: 11.5, color: Colors.white.withOpacity(0.92))),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -290,7 +290,7 @@ class _HeroBanner extends StatelessWidget {
       height: 5,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(99),
-        color: on ? Colors.white : Colors.white.withValues(alpha: 0.35),
+        color: on ? Colors.white : Colors.white.withOpacity(0.35),
       ),
     );
   }
@@ -424,7 +424,7 @@ class _WideCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(title, style: GoogleFonts.notoSerifTc(fontSize: 14.1, fontWeight: FontWeight.w600, color: Colors.white)),
             const SizedBox(height: 4),
-            Text(sub, style: GoogleFonts.notoSansTc(fontSize: 10.4, color: Colors.white.withValues(alpha: 0.9))),
+            Text(sub, style: GoogleFonts.notoSansTc(fontSize: 10.4, color: Colors.white.withOpacity(0.9))),
           ],
         ),
       ),

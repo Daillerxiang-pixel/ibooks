@@ -20,7 +20,7 @@ class IbShellHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: IbColors.bg.withValues(alpha: 0.94),
+        color: IbColors.bg.withOpacity(0.94),
         border: const Border(bottom: BorderSide(color: IbColors.line)),
       ),
       child: SafeArea(

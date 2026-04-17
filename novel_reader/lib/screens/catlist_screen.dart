@@ -44,7 +44,7 @@ class _CatlistScreenState extends State<CatlistScreen> {
                     onSelected: (_) => setState(() => _sort = i),
                     selectedColor: IbColors.accentSoft,
                     labelStyle: TextStyle(color: on ? IbColors.accent : IbColors.inkMuted, fontWeight: on ? FontWeight.w600 : FontWeight.w400),
-                    side: BorderSide(color: on ? IbColors.accent.withValues(alpha: 0.35) : IbColors.line),
+                    side: BorderSide(color: on ? IbColors.accent.withOpacity(0.35) : IbColors.line),
                     backgroundColor: IbColors.bgCard,
                   ),
                 );

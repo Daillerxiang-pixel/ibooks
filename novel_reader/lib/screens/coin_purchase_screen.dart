@@ -78,7 +78,7 @@ class _Pkg extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: hot ? IbColors.accent.withValues(alpha: 0.5) : IbColors.line),
+            border: Border.all(color: hot ? IbColors.accent.withOpacity(0.5) : IbColors.line),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

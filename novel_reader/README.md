@@ -27,6 +27,13 @@ flutter run
 
 ### 編譯測試 APK
 
+**Windows**：若 Gradle 報 `JdkImageTransform` / `jlink` 相關錯誤，請用 **JDK 17** 編譯（勿用 Android Studio 自帶 JBR 21 作為 Gradle JDK），例如：
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.18.8-hotspot"
+# 或在本機 `android/gradle.properties` 增設 org.gradle.java.home=...（勿提交含機器路徑的檔案）
+```
+
 ```bash
 cd novel_reader
 flutter pub get

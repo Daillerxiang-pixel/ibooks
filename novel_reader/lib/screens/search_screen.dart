@@ -21,7 +21,7 @@ class SearchScreen extends StatelessWidget {
             decoration: BoxDecoration(color: IbColors.bgCard, borderRadius: BorderRadius.circular(12), boxShadow: const [BoxShadow(color: Color(0x141A1A1A), blurRadius: 8)]),
             child: Row(
               children: [
-                Text('🔍', style: TextStyle(fontSize: 16, color: IbColors.ink.withValues(alpha: 0.45))),
+                Text('🔍', style: TextStyle(fontSize: 16, color: IbColors.ink.withOpacity(0.45))),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(

@@ -54,7 +54,7 @@ class VipPurchaseScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: IbColors.bgCard,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: IbColors.accent.withValues(alpha: 0.35), style: BorderStyle.solid),
+              border: Border.all(color: IbColors.accent.withOpacity(0.35), style: BorderStyle.solid),
             ),
             child: Column(
               children: [

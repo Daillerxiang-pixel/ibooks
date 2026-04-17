@@ -35,7 +35,7 @@ class ProfileTab extends StatelessWidget {
                     height: 52,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Text('讀', style: GoogleFonts.notoSansTc(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w700)),
@@ -47,7 +47,7 @@ class ProfileTab extends StatelessWidget {
                       children: [
                         Text('海外讀者 · 可綁定手機', style: GoogleFonts.notoSansTc(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
                         const SizedBox(height: 4),
-                        Text('付費閱讀 · 儲值與會員', style: GoogleFonts.notoSansTc(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.9))),
+                        Text('付費閱讀 · 儲值與會員', style: GoogleFonts.notoSansTc(fontSize: 11.5, color: Colors.white.withOpacity(0.9))),
                       ],
                     ),
                   ),
@@ -226,7 +226,7 @@ class _MenuTile extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 6),
                     child: Text(trailing!, style: GoogleFonts.notoSansTc(fontSize: 11.5, color: IbColors.accent, fontStyle: FontStyle.normal)),
                   ),
-                Text('›', style: TextStyle(color: IbColors.inkMuted.withValues(alpha: 0.5))),
+                Text('›', style: TextStyle(color: IbColors.inkMuted.withOpacity(0.5))),
               ],
             ),
           ),

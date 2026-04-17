@@ -210,7 +210,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
-              decoration: BoxDecoration(color: IbColors.readerBg.withValues(alpha: 0.96), border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08)))),
+              decoration: BoxDecoration(color: IbColors.readerBg.withOpacity(0.96), border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08)))),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
