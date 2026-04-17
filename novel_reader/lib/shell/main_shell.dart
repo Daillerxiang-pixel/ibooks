@@ -9,7 +9,7 @@ import '../theme/ibooks_colors.dart';
 import '../widgets/ibooks_shell_header.dart';
 import '../widgets/ibooks_tab_bar.dart';
 
-/// 主殼：內容區限寬並兩側留白，底部四 Tab（對齊原型）
+/// 主殼：內容區限寬保留兩側內邊距；底部 TabBar 全寬，背景與整體一致。
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -32,49 +32,50 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: IbColors.bg,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxW = math.min(
-            AppLayout.contentMaxWidth,
-            constraints.maxWidth - AppLayout.screenGutter * 2,
-          );
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxW),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: IbColors.bg,
-                  boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 0)],
-                  border: Border.all(color: IbColors.line),
-                ),
-                child: Column(
-                  children: [
-                    IbShellHeader(
-                      title: _titles[_tab],
-                      subtitle: _subs[_tab],
-                      onSearch: () => context.push('/search'),
+      body: Column(
+        children: [
+          // 內容區：最大寬限制 + 兩側 gutter，但**不再畫邊框**
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxW = math.min(
+                  AppLayout.contentMaxWidth,
+                  constraints.maxWidth - AppLayout.screenGutter * 2,
+                );
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxW),
+                    child: Column(
+                      children: [
+                        IbShellHeader(
+                          title: _titles[_tab],
+                          subtitle: _subs[_tab],
+                          onSearch: () => context.push('/search'),
+                        ),
+                        Expanded(
+                          child: IndexedStack(
+                            index: _tab,
+                            children: [
+                              AppRouter.tabForIndex(0),
+                              AppRouter.tabForIndex(1),
+                              AppRouter.tabForIndex(2),
+                              AppRouter.tabForIndex(3),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: IndexedStack(
-                        index: _tab,
-                        children: [
-                          AppRouter.tabForIndex(0),
-                          AppRouter.tabForIndex(1),
-                          AppRouter.tabForIndex(2),
-                          AppRouter.tabForIndex(3),
-                        ],
-                      ),
-                    ),
-                    IbTabBar(
-                      currentIndex: _tab,
-                      onChanged: (i) => setState(() => _tab = i),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+          // 底部 TabBar：橫鋪全屏，背景與整體一致
+          IbTabBar(
+            currentIndex: _tab,
+            onChanged: (i) => setState(() => _tab = i),
+          ),
+        ],
       ),
     );
   }

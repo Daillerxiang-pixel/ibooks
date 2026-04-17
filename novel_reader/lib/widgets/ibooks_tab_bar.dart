@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/ibooks_colors.dart';
 
+/// 底部 TabBar：與整體背景一致，橫鋪全屏，安全區同色（避免底部白條）。
 class IbTabBar extends StatelessWidget {
   const IbTabBar({
     super.key,
@@ -23,12 +24,15 @@ class IbTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       decoration: const BoxDecoration(
-        color: Color(0xF7FFFCF7),
+        color: IbColors.bg,
         border: Border(top: BorderSide(color: IbColors.line)),
       ),
       child: SafeArea(
         top: false,
+        // 用同色 ColoredBox 包裹下緣安全區，避免某些機型默認白色背景
+        minimum: EdgeInsets.zero,
         child: SizedBox(
           height: 56,
           child: Row(

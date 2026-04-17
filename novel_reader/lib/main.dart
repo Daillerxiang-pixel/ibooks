@@ -7,6 +7,7 @@ import 'router/app_router.dart';
 import 'src/api/ibooks_api_client.dart';
 import 'src/data/ibooks_repository.dart';
 import 'src/data/session_controller.dart';
+import 'src/data/shelf_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,8 @@ Future<void> main() async {
 
   final api = IbooksApiClient(tokenGetter: () => session.token);
   final repo = IbooksRepository(api);
+  final shelf = ShelfController(repository: repo, session: session);
+  await shelf.bootstrap();
 
   debugPrint('iBooks API: ${AppConfig.apiBaseUrl}');
 
@@ -24,6 +27,7 @@ Future<void> main() async {
         ChangeNotifierProvider<SessionController>.value(value: session),
         Provider<IbooksApiClient>.value(value: api),
         Provider<IbooksRepository>.value(value: repo),
+        ChangeNotifierProvider<ShelfController>.value(value: shelf),
       ],
       child: IbooksApp(router: AppRouter.create()),
     ),

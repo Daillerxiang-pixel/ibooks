@@ -52,6 +52,11 @@ class IbooksApiClient {
     return _decode(res);
   }
 
+  Future<dynamic> delete(String path) async {
+    final res = await _send(() => _client.delete(_uri(path), headers: _headers()));
+    return _decode(res);
+  }
+
   /// 將 DNS/斷網等轉為可讀提示（errno 7 / Failed host lookup = 本機未解析域名，非後端 HTTP 錯）
   Future<http.Response> _send(Future<http.Response> Function() fn) async {
     try {

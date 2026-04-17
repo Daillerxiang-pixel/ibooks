@@ -143,6 +143,26 @@ class IbooksRepository {
     return data.map((e) => ChapterListItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  // ---------------- Shelf ----------------
+
+  Future<List<BookRow>> shelfList() async {
+    final data = await _api.get('/shelf');
+    if (data is! List) return [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .where((j) => j['id'] != null)
+        .map(BookRow.fromJson)
+        .toList();
+  }
+
+  Future<void> shelfAdd(int bookId) async {
+    await _api.post('/shelf/$bookId', const {});
+  }
+
+  Future<void> shelfRemove(int bookId) async {
+    await _api.delete('/shelf/$bookId');
+  }
+
   Future<ChapterContentPayload> chapterContent(int chapterId) async {
     final data = await _api.get('/chapters/$chapterId');
     if (data is! Map<String, dynamic>) {
