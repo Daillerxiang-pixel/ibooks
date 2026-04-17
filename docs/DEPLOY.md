@@ -4,6 +4,15 @@
 
 **当前阶段**：iBooks 仍处于 **测试阶段**，**尚未**建立独立「正式环境」与测试/生产的拆分说明；下文为当前在用的一套部署约定，若后续上正式环境再单独补充文档与流程。
 
+### 测试服对外域名与 API（运维配置）
+
+| 项 | 值 |
+|----|-----|
+| 域名 | `book.kanashortplay.com` |
+| **接口根地址** | **`https://book.kanashortplay.com/api`**（与后端全局前缀 `/api` 一致） |
+
+**书籍正文入库、OSS 同步、付费章密钥** 的约定见 **[docs/CONTENT_INGEST_RULES.md](./CONTENT_INGEST_RULES.md)**。
+
 ---
 
 ## 1. 服务器目录与进程
@@ -159,7 +168,7 @@ https://test1.kanashortplay.com:8443/aihuantu/ibooks.git
 
 | 服务 | 目录 | PM2 进程名 | 本机端口 | 对外域名（示例） |
 |------|------|------------|----------|------------------|
-| **iBooks**（本节） | `/var/www/ibooks` | `ibooks-server` | **8081** | 以实际 Nginx `server_name` 为准 |
+| **iBooks**（本节） | `/var/www/ibooks` | `ibooks-server` | **8081** | 测试：**`book.kanashortplay.com`** → 反代 `/api` 至本机 8081 |
 | **AI 换图测试** | `/var/www/ai-face-swap-test` | `ai-face-swap-test` | **8082** | `test1.kanashortplay.com` |
 
 **运维注意**：
