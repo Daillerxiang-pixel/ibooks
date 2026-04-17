@@ -100,15 +100,35 @@ devops 中 `gen-eco.mjs` 生成的配置要点：
 
 ---
 
-## 6. Git 远程（内网 Gitea 示例）
+## 6. Git 远程（仅两份：GitHub + 测试服 Gitea）
 
-`ibooks_check.sh` 中使用的克隆地址示例：
+本仓库 **只保留两个 Git 远端**，不增加第三个「备用 Gitea」或其它并行托管：
 
-```text
-https://test.kanashortplay.com:8443/aihuantu/ibooks.git
+| 远端 | 用途 | 规范地址 / 说明 |
+|------|------|------------------|
+| **GitHub** | 公开协作、CI、备份 | [`https://github.com/Daillerxiang-pixel/ibooks`](https://github.com/Daillerxiang-pixel/ibooks)；克隆 `https://github.com/Daillerxiang-pixel/ibooks.git`；远程名常用 `github` |
+| **Gitea**（私有化） | 测试服内网/服务器 `git pull` | `https://test1.kanashortplay.com:8443/aihuantu/ibooks.git` |
+
+- **Gitea 仅此一份**，跑在 **测试服** `test1.kanashortplay.com:8443`。**正式服不部署 Gitea**（曾复制到正式服的实例已全部销毁，**禁止**再装第二套）。
+- 服务器 `/var/www/ibooks` 的 `origin`、以及 `ibooks_check.sh` 等脚本里的克隆地址，应对准上表 **测试服 Gitea**；若仍指向已废弃主机，请改为 `test1.kanashortplay.com:8443`。
+- 同步代码到远端时，应 **同时** 推 **GitHub** 与 **Gitea**（分支名以实际为准，示例）：
+
+```bash
+git push github master
+git push origin master
 ```
 
-实际以你服务器/内网 Gitea 上的仓库 URL 为准。
+若某一端暂时不可达可稍后补推；**不要**长期只推一边导致两边漂移。
+
+克隆示例（与上表一致）：
+
+```text
+# GitHub
+https://github.com/Daillerxiang-pixel/ibooks.git
+
+# 测试服 Gitea
+https://test1.kanashortplay.com:8443/aihuantu/ibooks.git
+```
 
 ---
 

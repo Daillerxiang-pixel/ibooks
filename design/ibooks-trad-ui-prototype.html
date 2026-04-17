@@ -1,0 +1,2231 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>iBooks 繁體版 · 互動原型</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f1eb;
+      --bg-card: #fffcf7;
+      --ink: #1a1a1a;
+      --ink-muted: #5c5c5c;
+      --accent: #8b3a2e;
+      --accent-soft: rgba(139, 58, 46, 0.12);
+      --gold: #c9a227;
+      --coin: #b8860b;
+      --line: rgba(0, 0, 0, 0.08);
+      --radius: 14px;
+      --shadow: 0 8px 28px rgba(26, 26, 26, 0.08);
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --tab-h: 56px;
+      --reader-font: 1.05rem;
+      --reader-lh: 1.95;
+      --reader-bg: #1e1c1a;
+      --reader-fg: #e8e4dc;
+      font-family: "Noto Sans TC", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(165deg, #e8e4dc 0%, #f4f1eb 40%, #efe9df 100%);
+      color: var(--ink);
+      min-height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-shell {
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100dvh;
+      background: var(--bg);
+      position: relative;
+      box-shadow: 0 0 0 1px var(--line);
+    }
+
+    .top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 10px 12px 10px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: rgba(244, 241, 235, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .brand {
+      font-family: "Noto Serif TC", serif;
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .brand small {
+      display: block;
+      font-size: 0.6rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--ink-muted);
+      margin-top: 1px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      border: none;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      color: var(--ink);
+    }
+
+    .icon-btn.hidden { visibility: hidden; pointer-events: none; }
+    .icon-btn.back-btn {
+      font-size: 1.35rem;
+      line-height: 1;
+      padding-bottom: 2px;
+    }
+
+    .header-back {
+      margin-right: 4px;
+    }
+
+    .brand-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-shell.sub-page .tab-bar {
+      display: none;
+    }
+
+    .app-shell.sub-page .screen {
+      padding-bottom: calc(var(--safe-b) + 20px);
+    }
+
+    .screen {
+      display: none;
+      padding: 0 14px calc(var(--tab-h) + var(--safe-b) + 16px);
+      animation: fadeIn 0.25s ease;
+    }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* —— 書城 豐富區塊 —— */
+    .hero {
+      margin-top: 12px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(135deg, #3d2a28, #8b3a2e);
+      box-shadow: var(--shadow);
+    }
+    .hero-inner {
+      position: absolute;
+      inset: 0;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      color: #fff;
+    }
+    .hero-tag {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.2);
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .hero h2 {
+      font-family: "Noto Serif TC", serif;
+      font-size: 1.12rem;
+      font-weight: 600;
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+    .hero p { font-size: 0.72rem; opacity: 0.92; }
+    .hero-dots {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+    .hero-dots span {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+    }
+    .hero-dots span.on { background: #fff; width: 14px; border-radius: 99px; }
+
+    .h-scroll {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin: 0 -14px;
+      padding-left: 14px;
+      padding-right: 14px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .h-scroll::-webkit-scrollbar { display: none; }
+
+    .card-h {
+      flex: 0 0 132px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+    .card-h .cv {
+      aspect-ratio: 3/4;
+      background: linear-gradient(145deg, #6b5344, #3d3229);
+    }
+    .card-h .cv.v2 { background: linear-gradient(145deg, #4a5d6b, #2c3840); }
+    .card-h .txt { padding: 8px; font-size: 0.72rem; font-weight: 500; line-height: 1.3; }
+
+    .wide-card {
+      flex: 0 0 260px;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16/9;
+      background: linear-gradient(120deg, #2c3840, #4a6b7c);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+    .wide-card .wc-inner {
+      position: absolute;
+      inset: 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      color: #fff;
+    }
+    .wide-card h4 { font-size: 0.88rem; margin-bottom: 4px; font-family: "Noto Serif TC", serif; }
+    .wide-card p { font-size: 0.65rem; opacity: 0.9; }
+
+    .rank-box {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+    .rank-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .rank-row:last-child { border-bottom: none; }
+    .rank-num {
+      width: 22px;
+      font-weight: 800;
+      color: var(--accent);
+      font-size: 0.95rem;
+    }
+    .rank-num.gold { color: #c9a227; }
+    .rank-cover {
+      width: 36px;
+      height: 48px;
+      border-radius: 4px;
+      background: linear-gradient(145deg, #6b5344, #3d3229);
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 18px 0 10px;
+    }
+    .section-title h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title .tag {
+      font-size: 0.58rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .section-title a {
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chip {
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      color: var(--ink-muted);
+      cursor: pointer;
+    }
+    .chip.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(139, 58, 46, 0.25);
+      font-weight: 500;
+    }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 11px 8px;
+    }
+    .book-card { cursor: pointer; }
+    .cover {
+      aspect-ratio: 3 / 4;
+      border-radius: 10px;
+      background: linear-gradient(145deg, #ddd8cf, #c4bdb2);
+      box-shadow: var(--shadow);
+      margin-bottom: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.32), transparent 42%);
+    }
+    .cover.c1 { background: linear-gradient(145deg, #6b5344, #3d3229); }
+    .cover.c2 { background: linear-gradient(145deg, #4a5d6b, #2c3840); }
+    .cover.c3 { background: linear-gradient(145deg, #5b4a6b, #352d40); }
+    .cover.c4 { background: linear-gradient(145deg, #4a6b5c, #2d4038); }
+    .cover.c5 { background: linear-gradient(145deg, #6b5a4a, #403529); }
+    .cover.c6 { background: linear-gradient(145deg, #5c4a6b, #352940); }
+    .badge {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      z-index: 1;
+      font-size: 0.55rem;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: var(--gold);
+      color: #1a1a1a;
+      font-weight: 600;
+    }
+    .book-title {
+      font-size: 0.74rem;
+      font-weight: 500;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .book-meta { font-size: 0.62rem; color: var(--ink-muted); margin-top: 2px; }
+
+    /* 分類列表頁 */
+    .sort-bar-label {
+      font-size: 0.68rem;
+      color: var(--ink-muted);
+      margin: 12px 0 6px;
+      letter-spacing: 0.06em;
+    }
+
+    .sort-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin: 0 -14px;
+      padding-left: 14px;
+      padding-right: 14px;
+      scrollbar-width: none;
+    }
+    .sort-scroll::-webkit-scrollbar { display: none; }
+
+    .sort-pill {
+      flex: 0 0 auto;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--bg-card);
+      font-size: 0.72rem;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--ink-muted);
+      white-space: nowrap;
+    }
+    .sort-pill.on {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 600;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+    }
+    .list-row .lc {
+      width: 48px;
+      height: 64px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      background: linear-gradient(145deg, #6b5344, #3d3229);
+    }
+    .list-row .li { flex: 1; min-width: 0; }
+    .list-row .li h4 { font-size: 0.84rem; font-weight: 600; margin-bottom: 4px; }
+    .list-row .li p { font-size: 0.65rem; color: var(--ink-muted); line-height: 1.35; }
+    .list-row .rank-badge {
+      width: 26px;
+      text-align: center;
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .list-row .rank-badge.t1 { color: #c9a227; }
+    .list-row .rank-badge.t2 { color: #a8a8a8; }
+    .list-row .rank-badge.t3 { color: #cd7f32; }
+    .list-row .stat {
+      font-size: 0.62rem;
+      color: var(--accent);
+      flex-shrink: 0;
+      text-align: right;
+      max-width: 72px;
+    }
+
+    .list-block.hidden { display: none !important; }
+
+    .hidden { display: none !important; }
+
+    .header-back.hidden {
+      display: none !important;
+      width: 0 !important;
+      min-width: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* 搜尋獨立頁 */
+    #screen-search .search-full {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+    #screen-search .search-full input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    /* 分類 */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px 8px;
+      margin-top: 10px;
+    }
+    .cat-cell {
+      text-align: center;
+      cursor: pointer;
+    }
+    .cat-ico {
+      width: 100%;
+      aspect-ratio: 1;
+      max-width: 52px;
+      margin: 0 auto 6px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+    }
+    .cat-cell span { font-size: 0.68rem; color: var(--ink-muted); }
+
+    /* 書架 */
+    .shelf-list { display: flex; flex-direction: column; gap: 10px; }
+    .shelf-row {
+      display: flex;
+      gap: 11px;
+      padding: 11px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      align-items: center;
+    }
+    .shelf-row .cover {
+      width: 68px;
+      flex-shrink: 0;
+      margin: 0;
+      aspect-ratio: 3 / 4;
+    }
+    .shelf-info { flex: 1; min-width: 0; }
+    .shelf-info h4 { font-size: 0.86rem; font-weight: 600; margin-bottom: 3px; }
+    .progress {
+      height: 3px;
+      background: var(--line);
+      border-radius: 99px;
+      margin-top: 7px;
+      overflow: hidden;
+    }
+    .progress span {
+      display: block;
+      height: 100%;
+      width: var(--w, 40%);
+      background: var(--accent);
+      border-radius: inherit;
+    }
+
+    /* 我的 */
+    .profile-card {
+      margin-top: 8px;
+      padding: 16px;
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, #2a2218, #4a3d2e);
+      color: #f8efd8;
+      box-shadow: var(--shadow);
+    }
+    .profile-card .pw-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .profile-card .pw-actions button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 11px;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-coin { background: linear-gradient(180deg, #ffe566, #c9a227); color: #2a2118; }
+    .btn-vip-outline {
+      background: rgba(255,255,255,0.08);
+      color: #f8efd8;
+      border: 1px solid rgba(255, 215, 120, 0.4);
+    }
+
+    .vip-month-card {
+      margin-top: 12px;
+      padding: 16px 14px;
+      border-radius: var(--radius);
+      color: #e8e4f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      background: linear-gradient(125deg, #1e1a2e 0%, #352d55 50%, #4a3d6b 100%);
+    }
+    .vip-month-card .vip-lead {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+    .vip-5x {
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #ffd56f, #c9a227);
+      color: #2a2118;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.15rem;
+      line-height: 1.1;
+      text-align: center;
+      box-shadow: 0 6px 16px rgba(201, 162, 39, 0.35);
+    }
+    .vip-5x small {
+      display: block;
+      font-size: 0.55rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      margin-top: 2px;
+    }
+    .vip-month-card .vip-title-line {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #f0e8ff;
+      letter-spacing: 0.04em;
+    }
+    .vip-month-card .vip-title-line span {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: rgba(232, 228, 240, 0.75);
+      margin-top: 5px;
+      letter-spacing: 0.06em;
+    }
+
+    /* 會員購買頁（完整說明） */
+    .vip-purchase-hero {
+      margin-top: 8px;
+      padding: 20px 16px;
+      border-radius: var(--radius);
+      background: linear-gradient(125deg, #1e1a2e, #4a3d6b);
+      color: #fff;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .vip-purchase-hero .big-5 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(180deg, #ffe566, #c9a227);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: none;
+    }
+    .vip-purchase-hero h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 10px;
+      letter-spacing: 0.08em;
+    }
+    .vip-purchase-hero p {
+      font-size: 0.72rem;
+      opacity: 0.88;
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+    .vip-purchase-rules {
+      margin-top: 14px;
+      padding: 14px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      font-size: 0.78rem;
+      line-height: 1.65;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+    .vip-purchase-rules p { margin-bottom: 10px; }
+    .vip-purchase-rules ul {
+      margin: 0;
+      padding-left: 1.15em;
+      color: var(--ink-muted);
+      font-size: 0.74rem;
+    }
+    .vip-purchase-rules li { margin-bottom: 6px; }
+    .vip-purchase-price {
+      margin-top: 14px;
+      padding: 14px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px dashed rgba(139, 58, 46, 0.35);
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .vip-purchase-price .amt {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 4px;
+    }
+    .btn-purchase-vip {
+      width: 100%;
+      margin-top: 14px;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      background: linear-gradient(180deg, #8b4a6e, #5a3558);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    /* 書幣購買 / 記錄類子頁 */
+    .sub-hero-balance {
+      margin-top: 8px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      background: linear-gradient(125deg, #3d2a28, #6b4535);
+      color: #fff;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .sub-hero-balance .num {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: #ffe566;
+    }
+    .coin-pkg-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .coin-pkg {
+      padding: 14px 10px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 2px solid var(--line);
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .coin-pkg.hot {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .coin-pkg .pkg-price {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .coin-pkg .pkg-get {
+      font-size: 0.72rem;
+      color: var(--ink-muted);
+      margin-top: 6px;
+    }
+    .coin-pkg .pkg-tag {
+      font-size: 0.58rem;
+      color: var(--accent);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .record-stack {
+      margin-top: 12px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .record-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.82rem;
+    }
+    .record-row:last-child { border-bottom: none; }
+    .record-row .r-main { min-width: 0; }
+    .record-row .r-title { font-weight: 600; }
+    .record-row .r-sub {
+      font-size: 0.68rem;
+      color: var(--ink-muted);
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+    .record-row .r-amt {
+      font-weight: 700;
+      flex-shrink: 0;
+      font-size: 0.88rem;
+    }
+    .record-row .r-amt.minus { color: var(--accent); }
+    .record-row .r-amt.plus { color: #2d6a4f; }
+    .record-row .r-state {
+      font-size: 0.62rem;
+      color: #2d6a4f;
+      margin-top: 4px;
+      text-align: right;
+    }
+    .chips-filter {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+    .chips-filter .chip.on {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-color: rgba(139, 58, 46, 0.3);
+      font-weight: 600;
+    }
+    .browse-mini {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .browse-mini .cv {
+      width: 44px;
+      height: 58px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      background: linear-gradient(145deg, #6b5344, #3d3229);
+    }
+    /* 優惠券：簡列 · 餘額/面額 · 狀態圖示 */
+    .coupon-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      font-size: 0.8rem;
+    }
+    .coupon-row-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .coupon-src {
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .coupon-exp {
+      font-size: 0.68rem;
+      color: var(--ink-muted);
+      margin-top: 3px;
+    }
+    .coupon-ratio {
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 0.98rem;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+    }
+    .coupon-state-ico {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      line-height: 1;
+      font-weight: 700;
+    }
+    .coupon-state-ico.normal {
+      background: rgba(45, 106, 79, 0.18);
+      color: #1b5e20;
+    }
+    .coupon-state-ico.depleted {
+      background: rgba(0, 0, 0, 0.06);
+      color: #777;
+    }
+    .coupon-state-ico.expired {
+      background: rgba(139, 58, 46, 0.15);
+      color: var(--accent);
+    }
+
+    .menu-list {
+      margin-top: 14px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item em {
+      font-style: normal;
+      font-size: 0.72rem;
+      color: var(--accent);
+    }
+
+    .profile-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+    }
+    .profile-meta h2 { font-size: 0.95rem; font-weight: 600; }
+    .profile-meta p { font-size: 0.72rem; opacity: 0.8; margin-top: 3px; }
+
+    .profile-balance {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .profile-balance .pb-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      opacity: 0.75;
+      margin-bottom: 4px;
+    }
+    .profile-balance .pb-main {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .profile-balance .pb-num {
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #ffe566;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    .profile-balance .pb-unit {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #f0d78c;
+    }
+    .profile-balance .pb-hint {
+      font-size: 0.62rem;
+      opacity: 0.65;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    .profile-balance .pb-side {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .profile-balance .pb-side span {
+      display: block;
+      font-size: 0.62rem;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+
+    /* 詳情 */
+    .detail-hero { display: flex; gap: 14px; margin-top: 8px; }
+    .detail-hero .cover { width: 104px; flex-shrink: 0; aspect-ratio: 3 / 4; }
+    .detail-text h2 {
+      font-family: "Noto Serif TC", serif;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+    .detail-text .sub { font-size: 0.74rem; color: var(--ink-muted); line-height: 1.45; }
+    .price-row { margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .price { font-size: 1.02rem; font-weight: 700; color: var(--accent); }
+    .price del { font-size: 0.76rem; color: var(--ink-muted); font-weight: 400; }
+    .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+    .detail-actions {
+      margin-top: 22px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+    .detail-push {
+      margin-top: 18px;
+    }
+    .btn {
+      flex: 1;
+      padding: 11px;
+      border-radius: 11px;
+      border: none;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: var(--bg-card); color: var(--ink); border: 1px solid var(--line); }
+    .chapter-list { margin-top: 18px; }
+    .chapter-list-page {
+      margin-top: 12px;
+      padding: 0 2px;
+    }
+    .chapter-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .lock { font-size: 0.66rem; color: var(--gold); }
+
+    /* 閱讀器 */
+    .reader-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: var(--reader-bg);
+      color: var(--reader-fg);
+      display: none;
+      flex-direction: column;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .reader-screen.open { display: flex; }
+
+    .reader-bar {
+      padding: 8px 10px;
+      padding-top: max(8px, env(safe-area-inset-top));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 28, 26, 0.92);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .reader-bar button {
+      background: none;
+      border: none;
+      color: var(--reader-fg);
+      font-size: 0.82rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .reader-title {
+      font-size: 0.76rem;
+      opacity: 0.88;
+      max-width: 46%;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .reader-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 20px 28px;
+      font-family: "Noto Serif TC", serif;
+      font-size: var(--reader-font);
+      line-height: var(--reader-lh);
+      letter-spacing: 0.04em;
+    }
+    .reader-body p { margin-bottom: 1.15em; text-indent: 2em; }
+
+    .reader-tools {
+      padding: 8px 12px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 28, 26, 0.98);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.72rem;
+    }
+    .reader-tools button {
+      background: none;
+      border: none;
+      color: #b8b4a8;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 6px 4px;
+    }
+    .reader-tools .primary-a {
+      color: #f0d78c;
+      font-weight: 600;
+    }
+
+    /* 閱讀設定面板 */
+    .reader-settings {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 60;
+      background: rgba(36, 34, 32, 0.98);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px 16px 0 0;
+      padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+      transform: translateY(110%);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+      max-height: 72vh;
+      overflow-y: auto;
+    }
+    .reader-settings.open { transform: translateY(0); }
+    .rs-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.2);
+      margin: 0 auto 12px;
+    }
+    .rs-title { font-size: 0.78rem; color: #b8b4a8; margin-bottom: 10px; letter-spacing: 0.08em; }
+    .rs-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 10px;
+    }
+    .rs-row label { font-size: 0.82rem; color: var(--reader-fg); flex-shrink: 0; }
+    .rs-font-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rs-font-ctrl button {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: var(--reader-fg);
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .rs-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .rs-chips button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: #b8b4a8;
+      font-size: 0.72rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .rs-chips button.on {
+      border-color: #f0d78c;
+      color: #f0d78c;
+      background: rgba(240, 215, 140, 0.1);
+    }
+    .rs-colors {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .rs-colors button {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+    .rs-colors button.on { border-color: #f0d78c; box-shadow: 0 0 0 2px rgba(240, 215, 140, 0.25); }
+    .rs-brightness input[type="range"] {
+      width: 140px;
+      accent-color: #f0d78c;
+    }
+    .rs-done {
+      width: 100%;
+      margin-top: 8px;
+      padding: 11px;
+      border-radius: 11px;
+      border: none;
+      background: linear-gradient(180deg, #5a4a3a, #3d3229);
+      color: #f8efd8;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .reader-dim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 55;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .reader-dim.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .tab-bar {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: 100%;
+      max-width: 420px;
+      height: calc(var(--tab-h) + var(--safe-b));
+      padding-bottom: var(--safe-b);
+      background: rgba(255, 252, 247, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--line);
+      display: flex;
+      z-index: 30;
+    }
+    .tab {
+      flex: 1;
+      border: none;
+      background: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      font-size: 0.58rem;
+      color: var(--ink-muted);
+      cursor: pointer;
+      font-family: inherit;
+      padding-top: 5px;
+    }
+    .tab .ico { font-size: 1.15rem; line-height: 1; }
+    .tab.active { color: var(--accent); font-weight: 600; }
+
+    .hint {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--ink-muted);
+      padding: 10px 8px 0;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <header class="top-bar" id="topBar">
+      <button type="button" class="icon-btn back-btn header-back hidden" id="btnHeaderBack" aria-label="返回">‹</button>
+      <div class="top-bar-left brand-wrap">
+        <div class="brand" id="topBrand">
+          書城
+          <small id="topSub">精選 · 推薦 · 付費閱讀</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button type="button" class="icon-btn" id="btnSearch" aria-label="搜尋">🔍</button>
+      </div>
+    </header>
+
+    <!-- 書架 -->
+    <section id="screen-shelf" class="screen" aria-label="書架">
+      <div class="section-title" style="margin-top:6px;"><h3>最近閱讀</h3><a href="#" onclick="return false;">管理</a></div>
+      <div class="shelf-list">
+        <div class="shelf-row" data-goto="reader">
+          <div class="cover c1"></div>
+          <div class="shelf-info">
+            <h4>霓虹深處的約定</h4>
+            <div class="book-meta">讀至 第 42 章 · 上次 2 小時前</div>
+            <div class="progress"><span style="--w:38%"></span></div>
+          </div>
+        </div>
+        <div class="shelf-row" data-goto="detail">
+          <div class="cover c2"></div>
+          <div class="shelf-info">
+            <h4>海風與舊信箋</h4>
+            <div class="book-meta">已加入書架 · 未開始</div>
+            <div class="progress"><span style="--w:0%"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="section-title"><h3>書架收藏</h3></div>
+      <div class="book-grid">
+        <div class="book-card" data-goto="detail"><div class="cover c3"></div><div class="book-title">南洋夜雨錄</div><div class="book-meta">付費連載</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c4"></div><div class="book-title">霧島心事</div><div class="book-meta">懸疑</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c5"></div><div class="book-title">半城煙火</div><div class="book-meta">古言</div></div>
+      </div>
+    </section>
+
+    <!-- 書城 -->
+    <section id="screen-home" class="screen active" aria-label="書城">
+      <div class="hero" data-goto="detail">
+        <div class="hero-inner">
+          <span class="hero-tag">輪播 · 編輯精選</span>
+          <h2>長夜將盡，燈火仍為你亮著一章</h2>
+          <p>限時折扣 · 完結高分 · 海外繁體精校</p>
+        </div>
+        <div class="hero-dots"><span class="on"></span><span></span><span></span></div>
+      </div>
+
+      <div class="section-title">
+        <h3>本週強推 <span class="tag">HOT</span></h3>
+        <a href="#" onclick="return false;">更多</a>
+      </div>
+      <div class="h-scroll">
+        <div class="card-h" data-goto="detail"><div class="cv"></div><div class="txt">霓虹深處的約定</div></div>
+        <div class="card-h" data-goto="detail"><div class="cv v2"></div><div class="txt">海風與舊信箋</div></div>
+        <div class="card-h" data-goto="detail"><div class="cv"></div><div class="txt">南洋夜雨錄</div></div>
+        <div class="card-h" data-goto="detail"><div class="cv v2"></div><div class="txt">霧島心事</div></div>
+      </div>
+
+      <div class="section-title"><h3>限時 · 橫幅專區</h3></div>
+      <div class="h-scroll">
+        <div class="wide-card" data-goto="detail">
+          <div class="wc-inner">
+            <span class="hero-tag" style="align-self:flex-start;">整本優惠</span>
+            <h4>批量購 8 折</h4>
+            <p>整本解鎖更省 · 限時 48 小時</p>
+          </div>
+        </div>
+        <div class="wide-card" data-goto="detail" style="background:linear-gradient(120deg,#3d2838,#6b4a5c);">
+          <div class="wc-inner">
+            <span class="hero-tag" style="align-self:flex-start;">會員專區</span>
+            <h4>會員暢讀書庫</h4>
+            <p>標籤內作品暢讀 · 詳見會員權益</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>熱門分類</h3></div>
+      <div class="chips" id="chips">
+        <button type="button" class="chip active">都市</button>
+        <button type="button" class="chip">古言</button>
+        <button type="button" class="chip">玄幻</button>
+        <button type="button" class="chip">懸疑</button>
+        <button type="button" class="chip">甜寵</button>
+      </div>
+
+      <div class="section-title"><h3>排行榜</h3><a href="#" onclick="return false;">完整榜單</a></div>
+      <div class="rank-box">
+        <div class="rank-row" data-goto="detail"><span class="rank-num gold">1</span><div class="rank-cover"></div><span style="flex:1;">霓虹深處的約定</span><span style="font-size:0.65rem;color:var(--ink-muted);">付費榜</span></div>
+        <div class="rank-row" data-goto="detail"><span class="rank-num gold">2</span><div class="rank-cover" style="background:linear-gradient(145deg,#4a5d6b,#2c3840);"></div><span style="flex:1;">海風與舊信箋</span><span style="font-size:0.65rem;color:var(--ink-muted);">熱度</span></div>
+        <div class="rank-row" data-goto="detail"><span class="rank-num">3</span><div class="rank-cover" style="background:linear-gradient(145deg,#5b4a6b,#352d40);"></div><span style="flex:1;">南洋夜雨錄</span><span style="font-size:0.65rem;color:var(--ink-muted);">新书</span></div>
+      </div>
+
+      <div class="section-title"><h3>猜你喜歡</h3><a href="#" onclick="return false;">換一批</a></div>
+      <div class="book-grid">
+        <div class="book-card" data-goto="detail"><div class="cover c1"><span class="badge">VIP</span></div><div class="book-title">霓虹深處的約定</div><div class="book-meta">連載 · 付費閱讀</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c2"></div><div class="book-title">海風與舊信箋</div><div class="book-meta">完結 · 精校</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c3"><span class="badge">限免</span></div><div class="book-title">南洋夜雨錄</div><div class="book-meta">連載 · 可購買</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c4"></div><div class="book-title">霧島心事</div><div class="book-meta">懸疑</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c5"></div><div class="book-title">半城煙火</div><div class="book-meta">古言</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c6"></div><div class="book-title">星塵旅人</div><div class="book-meta">科幻</div></div>
+      </div>
+
+      <div class="section-title"><h3>完結經典 · 一口價</h3></div>
+      <div class="h-scroll">
+        <div class="card-h" data-goto="detail"><div class="cv v2"></div><div class="txt">海風與舊信箋<br><span style="font-size:0.6rem;color:var(--accent);">全本特惠</span></div></div>
+        <div class="card-h" data-goto="detail"><div class="cv"></div><div class="txt">霧島心事<br><span style="font-size:0.6rem;color:var(--accent);">全本一口價</span></div></div>
+        <div class="card-h" data-goto="detail"><div class="cv v2"></div><div class="txt">半城煙火<br><span style="font-size:0.6rem;color:var(--accent);">全本特惠</span></div></div>
+      </div>
+      <p class="hint">頂欄 🔍 進入搜尋頁；分類網格進入分類列表。</p>
+    </section>
+
+    <!-- 分類 -->
+    <section id="screen-category" class="screen" aria-label="分類">
+      <div class="section-title" style="margin-top:8px;"><h3>全部分類</h3></div>
+      <div class="cat-grid" id="catGrid">
+        <div class="cat-cell" data-cat="都市" data-goto="catlist"><div class="cat-ico">🏙</div><span>都市</span></div>
+        <div class="cat-cell" data-cat="古言" data-goto="catlist"><div class="cat-ico">🏯</div><span>古言</span></div>
+        <div class="cat-cell" data-cat="玄幻" data-goto="catlist"><div class="cat-ico">⚔</div><span>玄幻</span></div>
+        <div class="cat-cell" data-cat="懸疑" data-goto="catlist"><div class="cat-ico">🔍</div><span>懸疑</span></div>
+        <div class="cat-cell" data-cat="甜寵" data-goto="catlist"><div class="cat-ico">💕</div><span>甜寵</span></div>
+        <div class="cat-cell" data-cat="科幻" data-goto="catlist"><div class="cat-ico">🚀</div><span>科幻</span></div>
+        <div class="cat-cell" data-cat="港風" data-goto="catlist"><div class="cat-ico">🌊</div><span>港風</span></div>
+        <div class="cat-cell" data-cat="全部" data-goto="catlist"><div class="cat-ico">📚</div><span>更多</span></div>
+      </div>
+      <div class="section-title"><h3>分類熱門</h3></div>
+      <div class="book-grid">
+        <div class="book-card" data-goto="detail"><div class="cover c4"></div><div class="book-title">霧島心事</div><div class="book-meta">懸疑 · 付費</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c1"></div><div class="book-title">霓虹深處…</div><div class="book-meta">都市</div></div>
+        <div class="book-card" data-goto="detail"><div class="cover c6"></div><div class="book-title">星塵旅人</div><div class="book-meta">科幻</div></div>
+      </div>
+    </section>
+
+    <!-- 分類 · 作品列表 -->
+    <section id="screen-catlist" class="screen" aria-label="分類作品列表">
+      <div class="sort-bar-label">排序方式</div>
+      <div class="sort-scroll" id="sortScroll">
+        <button type="button" class="sort-pill on" data-sort="hot">綜合熱門</button>
+        <button type="button" class="sort-pill" data-sort="pay">付費／暢銷</button>
+        <button type="button" class="sort-pill" data-sort="fav">收藏</button>
+        <button type="button" class="sort-pill" data-sort="words">字數</button>
+        <button type="button" class="sort-pill" data-sort="update">最近更新</button>
+      </div>
+      <div class="section-title" style="margin-top:14px;"><h3 id="catListTitle">都市 · 作品列表</h3></div>
+
+      <div id="listBlockRank" class="list-block">
+        <div class="list-row" data-goto="detail">
+          <span class="rank-badge t1">1</span>
+          <div class="lc" style="background:linear-gradient(145deg,#6b5344,#3d3229);"></div>
+          <div class="li"><h4>霓虹深處的約定</h4><p>連載 · 128 萬字 · 都市言情</p></div>
+          <span class="stat" data-stat-pay>熱銷指數 98</span>
+        </div>
+        <div class="list-row" data-goto="detail">
+          <span class="rank-badge t2">2</span>
+          <div class="lc" style="background:linear-gradient(145deg,#4a5d6b,#2c3840);"></div>
+          <div class="li"><h4>海風與舊信箋</h4><p>完結 · 付費精校</p></div>
+          <span class="stat" data-stat-pay>熱銷 92</span>
+        </div>
+        <div class="list-row" data-goto="detail">
+          <span class="rank-badge t3">3</span>
+          <div class="lc" style="background:linear-gradient(145deg,#5b4a6b,#352d40);"></div>
+          <div class="li"><h4>南洋夜雨錄</h4><p>連載 · 海外繁體</p></div>
+          <span class="stat" data-stat-pay>熱銷 88</span>
+        </div>
+        <div class="list-row" data-goto="detail">
+          <span class="rank-badge">4</span>
+          <div class="lc" style="background:linear-gradient(145deg,#4a6b5c,#2d4038);"></div>
+          <div class="li"><h4>霧島心事</h4><p>懸疑 · 熱度攀升</p></div>
+          <span class="stat" data-stat-pay>熱銷 81</span>
+        </div>
+      </div>
+      <p class="hint">原型：排序切換會更新右側統計文案；正式版對接 API query。</p>
+    </section>
+
+    <!-- 搜尋（獨立全屏頁） -->
+    <section id="screen-search" class="screen" aria-label="搜尋">
+      <div class="search-full">
+        <span style="opacity:.5">🔍</span>
+        <input type="search" placeholder="搜尋書名、作者、標籤…" id="searchInputMain" />
+      </div>
+      <div class="section-title" style="margin-top:16px;"><h3>熱搜</h3></div>
+      <div class="chips">
+        <span class="chip">霸總</span>
+        <span class="chip">港風</span>
+        <span class="chip">穿越</span>
+        <span class="chip">付費榜</span>
+      </div>
+      <div class="section-title"><h3>搜尋歷史</h3><a href="#" onclick="return false;">清除</a></div>
+      <div class="menu-list" style="margin-top:0;">
+        <div class="menu-item"><span>霓虹深處的約定</span><span>›</span></div>
+        <div class="menu-item"><span>港風 言情</span><span>›</span></div>
+      </div>
+    </section>
+
+    <!-- 我的 -->
+    <section id="screen-profile" class="screen" aria-label="我的">
+      <div class="profile-card">
+        <div class="profile-head" style="margin-bottom:0;">
+          <div class="avatar">讀</div>
+          <div class="profile-meta">
+            <h2>海外讀者 · 可綁定手機</h2>
+            <p>付費閱讀 · 儲值與會員</p>
+          </div>
+        </div>
+        <div class="profile-balance">
+          <div>
+            <div class="pb-label">帳戶餘額（書幣）</div>
+            <div class="pb-main">
+              <span class="pb-num" id="profileBalanceNum">1,280</span>
+              <span class="pb-unit">書幣</span>
+            </div>
+            <p class="pb-hint">可用於解鎖付費章節；儲值或活動贈送會增加餘額。</p>
+          </div>
+          <div class="pb-side">
+            <span>上次更新</span>
+            <span style="font-size:0.72rem;opacity:0.9;">剛剛</span>
+          </div>
+        </div>
+        <div class="pw-actions">
+          <button type="button" class="btn-coin" id="btnTopup">儲值</button>
+          <button type="button" class="btn-vip-outline" id="btnConsumeLog">消費記錄</button>
+        </div>
+      </div>
+
+      <div class="vip-month-card" id="vipMonthEntry" title="前往會員購買頁">
+        <div class="vip-lead">
+          <div class="vip-5x">5<small>倍</small></div>
+          <div class="vip-title-line">
+            包月優惠套餐
+            <span>進入購買頁查看說明</span>
+          </div>
+        </div>
+        <span style="font-size:1.25rem;opacity:0.9;">›</span>
+      </div>
+
+      <div class="menu-list">
+        <div class="menu-item" data-open-screen="rechargeorders" role="button" tabindex="0"><span>📋 我的訂單</span><span>›</span></div>
+        <div class="menu-item" data-open-screen="couponlist" role="button" tabindex="0"><span>🎁 優惠券</span><em>活動</em></div>
+        <div class="menu-item" data-open-screen="browsehistory" role="button" tabindex="0"><span>🕘 瀏覽記錄</span><span>›</span></div>
+        <div class="menu-item"><span>⚙ 帳號與安全</span><span>›</span></div>
+      </div>
+    </section>
+
+    <!-- 會員購買（包月套餐說明） -->
+    <section id="screen-vippurchase" class="screen" aria-label="會員購買">
+      <div class="vip-purchase-hero">
+        <div class="big-5">5 倍</div>
+        <h2>包月優惠套餐</h2>
+        <p>同價購幣 · 30 天累計領取量更高</p>
+      </div>
+      <div class="vip-purchase-rules">
+        <p>
+          用戶購買<strong>包月套餐</strong>後，每日可領取<strong>固定數量書幣</strong>；自購買日起連續 <strong>30</strong> 日內，累計領取書幣總量＝以<strong>相同價格</strong>單次<strong>購買書幣</strong>可獲得書幣總額的 <strong>5 倍</strong>。
+        </p>
+        <ul>
+          <li>公式：30 天每日領取之和 ＝ 5 ×（同價單次購幣可得總額）。</li>
+          <li>單本解鎖、儲值購幣等規則可與包月並存，以站內說明為準。</li>
+        </ul>
+      </div>
+      <div class="vip-purchase-price">
+        包月套餐（示意價）
+        <div class="amt">NT$ 99 / 30 天</div>
+      </div>
+      <button type="button" class="btn-purchase-vip" id="btnVipPurchaseMock">立即購買</button>
+      <p class="hint">原型按鈕不連支付；正式版接訂單與簽到領幣流程。</p>
+    </section>
+
+    <!-- 書幣購買 -->
+    <section id="screen-coinpurchase" class="screen" aria-label="書幣購買">
+      <div class="sub-hero-balance">
+        <div style="font-size:0.78rem;opacity:0.92;">目前餘額（書幣）</div>
+        <div class="num" id="coinPurchaseBalanceShow">1,280</div>
+      </div>
+      <div class="section-title" style="margin-top:14px;"><h3>選擇儲值檔位</h3></div>
+      <div class="coin-pkg-grid">
+        <div class="coin-pkg" data-coin-mock="60">
+          <div class="pkg-price">NT$ 60</div>
+          <div class="pkg-get">得 600 書幣</div>
+        </div>
+        <div class="coin-pkg hot" data-coin-mock="120">
+          <div class="pkg-price">NT$ 120</div>
+          <div class="pkg-get">得 1,280 書幣</div>
+          <div class="pkg-tag">多送一點</div>
+        </div>
+        <div class="coin-pkg" data-coin-mock="300">
+          <div class="pkg-price">NT$ 300</div>
+          <div class="pkg-get">得 3,300 書幣</div>
+        </div>
+        <div class="coin-pkg" data-coin-mock="500">
+          <div class="pkg-price">NT$ 500</div>
+          <div class="pkg-get">得 5,800 書幣</div>
+          <div class="pkg-tag">划算</div>
+        </div>
+      </div>
+      <p class="hint">原型：點檔位示意下單；正式版接金流與到帳。</p>
+    </section>
+
+    <!-- 消費記錄 -->
+    <section id="screen-consumelog" class="screen" aria-label="消費記錄">
+      <div class="section-title" style="margin-top:4px;"><h3>書幣變動</h3></div>
+      <div class="record-stack">
+        <div class="record-row">
+          <div class="r-main">
+            <div class="r-title">解鎖章節《霓虹深處的約定》第 3 章</div>
+            <div class="r-sub">2026-04-14 21:06 · 訂單 #C882910</div>
+          </div>
+          <div class="r-amt minus">−12</div>
+        </div>
+        <div class="record-row">
+          <div class="r-main">
+            <div class="r-title">解鎖章節《霓虹深處的約定》第 4 章</div>
+            <div class="r-sub">2026-04-14 21:18 · 訂單 #C882911</div>
+          </div>
+          <div class="r-amt minus">−12</div>
+        </div>
+        <div class="record-row">
+          <div class="r-main">
+            <div class="r-title">儲值到帳（NT$ 120 檔）</div>
+            <div class="r-sub">2026-04-10 10:02 · 訂單 #R441102</div>
+          </div>
+          <div class="r-amt plus">+1,280</div>
+        </div>
+      </div>
+      <p class="hint">原型列表為示意；正式版分頁載入。</p>
+    </section>
+
+    <!-- 我的充值訂單 -->
+    <section id="screen-rechargeorders" class="screen" aria-label="充值訂單">
+      <div class="section-title" style="margin-top:4px;"><h3>充值訂單</h3></div>
+      <div class="record-stack">
+        <div class="record-row order-row">
+          <div class="r-main">
+            <div class="r-title">NT$ 120 · 得 1,280 書幣</div>
+            <div class="r-sub r-meta">單號 R441102 · 2026-04-10 10:02</div>
+          </div>
+          <div>
+            <div class="r-amt plus" style="font-size:0.82rem;">已支付</div>
+            <div class="r-state">已發放</div>
+          </div>
+        </div>
+        <div class="record-row order-row">
+          <div class="r-main">
+            <div class="r-title">NT$ 60 · 得 600 書幣</div>
+            <div class="r-sub r-meta">單號 R439801 · 2026-03-02 19:41</div>
+          </div>
+          <div>
+            <div class="r-amt plus" style="font-size:0.82rem;">已支付</div>
+            <div class="r-state">已發放</div>
+          </div>
+        </div>
+        <div class="record-row order-row">
+          <div class="r-main">
+            <div class="r-title">NT$ 300 · 得 3,300 書幣</div>
+            <div class="r-sub r-meta">單號 R438200 · 待支付</div>
+          </div>
+          <div>
+            <div class="r-amt minus" style="font-size:0.82rem;">待付</div>
+            <div class="r-state" style="color:var(--accent);">將過期</div>
+          </div>
+        </div>
+      </div>
+      <p class="hint">含待支付／已發放等狀態示意。</p>
+    </section>
+
+    <!-- 瀏覽記錄 -->
+    <section id="screen-browsehistory" class="screen" aria-label="瀏覽記錄">
+      <div class="section-title" style="margin-top:4px;"><h3>最近瀏覽</h3></div>
+      <div class="record-stack">
+        <div class="record-row browse-mini" data-goto="detail" style="cursor:pointer;">
+          <div class="cv"></div>
+          <div class="r-main">
+            <div class="r-title">霓虹深處的約定</div>
+            <div class="r-sub">讀至 第 4 章 · 今日 21:18</div>
+          </div>
+          <span style="opacity:0.5;">›</span>
+        </div>
+        <div class="record-row browse-mini" data-goto="detail" style="cursor:pointer;">
+          <div class="cv" style="background:linear-gradient(145deg,#4a5d6b,#2c3840);"></div>
+          <div class="r-main">
+            <div class="r-title">海風與舊信箋</div>
+            <div class="r-sub">試讀 第 1 章 · 昨日</div>
+          </div>
+          <span style="opacity:0.5;">›</span>
+        </div>
+        <div class="record-row browse-mini" data-goto="detail" style="cursor:pointer;">
+          <div class="cv" style="background:linear-gradient(145deg,#5b4a6b,#352d40);"></div>
+          <div class="r-main">
+            <div class="r-title">南洋夜雨錄</div>
+            <div class="r-sub">書籍詳情 · 三日前</div>
+          </div>
+          <span style="opacity:0.5;">›</span>
+        </div>
+      </div>
+      <p class="hint">點一列進入書籍詳情（原型）。</p>
+    </section>
+
+    <!-- 優惠券：餘額/面額 · 狀態圖示 -->
+    <section id="screen-couponlist" class="screen" aria-label="優惠券記錄">
+      <div class="chips-filter" id="couponFilterBar" role="tablist" aria-label="依狀態篩選">
+        <button type="button" class="chip on" data-coupon-filter="all">全部</button>
+        <button type="button" class="chip" data-coupon-filter="normal">正常</button>
+        <button type="button" class="chip" data-coupon-filter="depleted">使用完</button>
+        <button type="button" class="chip" data-coupon-filter="expired">已過期</button>
+      </div>
+      <div class="coupon-row" data-coupon-state="normal">
+        <div class="coupon-row-main">
+          <div class="coupon-src">春季儲值滿額禮</div>
+          <div class="coupon-exp">至 2026-08-31</div>
+        </div>
+        <div class="coupon-ratio" title="餘額／面額">32/50</div>
+        <span class="coupon-state-ico normal" role="img" aria-label="正常">✓</span>
+      </div>
+      <div class="coupon-row" data-coupon-state="normal">
+        <div class="coupon-row-main">
+          <div class="coupon-src">新用戶註冊贈送</div>
+          <div class="coupon-exp">至 2026-12-31</div>
+        </div>
+        <div class="coupon-ratio" title="餘額／面額">100/200</div>
+        <span class="coupon-state-ico normal" role="img" aria-label="正常">✓</span>
+      </div>
+      <div class="coupon-row" data-coupon-state="depleted">
+        <div class="coupon-row-main">
+          <div class="coupon-src">邀請好友達標禮</div>
+          <div class="coupon-exp">曾有效至 2026-03-15</div>
+        </div>
+        <div class="coupon-ratio" title="餘額／面額">0/20</div>
+        <span class="coupon-state-ico depleted" role="img" aria-label="使用完">○</span>
+      </div>
+      <div class="coupon-row" data-coupon-state="expired">
+        <div class="coupon-row-main">
+          <div class="coupon-src">端午限時活動</div>
+          <div class="coupon-exp">已結束 2026-04-10</div>
+        </div>
+        <div class="coupon-ratio" title="餘額／面額">15/15</div>
+        <span class="coupon-state-ico expired" role="img" aria-label="已過期">×</span>
+      </div>
+      <p class="hint">圖示：✓ 正常 · ○ 使用完 · × 已過期（原型）。</p>
+    </section>
+
+    <!-- 書籍詳情 -->
+    <section id="screen-detail" class="screen" aria-label="書籍詳情">
+      <div class="detail-hero">
+        <div class="cover c1"></div>
+        <div class="detail-text">
+          <h2>霓虹深處的約定</h2>
+          <p class="sub">作者：林晚澄 · 都市言情 · 港島背景</p>
+          <div class="price-row">
+            <span class="price">付費閱讀 · 12 起</span>
+            <del>原 18</del>
+          </div>
+        </div>
+      </div>
+      <p class="sub" style="margin-top:12px;line-height:1.65;">
+        繁體精校版。解鎖方式：<strong>按章付費</strong> 或 <strong>會員免費讀</strong>（若本書在會員書庫內）。可批量購章。
+      </p>
+      <div class="section-title" style="margin-top:18px;"><h3>目錄</h3></div>
+      <div class="menu-list" style="margin-top:8px;">
+        <div class="menu-item" data-goto="chapterlist" role="button" tabindex="0">
+          <span>查看完整目錄</span><span style="font-size:0.72rem;color:var(--ink-muted);">共 128 章 ›</span>
+        </div>
+      </div>
+      <div class="chapter-list" style="margin-top:12px;opacity:0.85;">
+        <div class="chapter-item" style="cursor:default;"><span style="color:var(--ink-muted);font-size:0.72rem;">正文預覽</span></div>
+        <div class="chapter-item" style="cursor:default;">第 1 章 起風了<span>免費</span></div>
+        <div class="chapter-item" style="cursor:default;">第 2 章 轉角咖啡館<span>免費</span></div>
+      </div>
+      <div class="detail-push">
+        <div class="section-title"><h3>同類推送</h3></div>
+        <div class="book-grid" style="margin-top:10px;">
+          <div class="book-card" data-goto="detail"><div class="cover c2"></div><div class="book-title">海風與舊信箋</div><div class="book-meta">都市 · 港風</div></div>
+          <div class="book-card" data-goto="detail"><div class="cover c4"></div><div class="book-title">霧島心事</div><div class="book-meta">懸疑言情</div></div>
+          <div class="book-card" data-goto="detail"><div class="cover c5"></div><div class="book-title">半城煙火</div><div class="book-meta">古言 · 完結</div></div>
+        </div>
+      </div>
+      <div class="detail-actions btn-row">
+        <button type="button" class="btn btn-primary" data-goto="reader">開始閱讀</button>
+        <button type="button" class="btn btn-ghost">加入書架</button>
+      </div>
+    </section>
+
+    <!-- 書籍目錄（詳情與閱讀器共用） -->
+    <section id="screen-chapterlist" class="screen" aria-label="章節目錄">
+      <p class="sub" style="margin-top:4px;line-height:1.5;">
+        <strong>霓虹深處的約定</strong><br />
+        <span style="font-size:0.72rem;color:var(--ink-muted);">連載 · 付費章節以站內標示為準</span>
+      </p>
+      <div class="chapter-list chapter-list-page">
+        <div class="chapter-item" data-goto="reader">第 1 章 起風了<span>免費</span></div>
+        <div class="chapter-item" data-goto="reader">第 2 章 轉角咖啡館<span>免費</span></div>
+        <div class="chapter-item" data-goto="reader">第 3 章 霓虹背面<span class="lock">🔒 付費</span></div>
+        <div class="chapter-item" data-goto="reader">第 4 章 未寄出的信<span class="lock">🔒 付費</span></div>
+        <div class="chapter-item" data-goto="reader">第 5 章 港島夜色<span class="lock">🔒 付費</span></div>
+        <div class="chapter-item" data-goto="reader">第 6 章 舊事如風<span class="lock">🔒 付費</span></div>
+        <div class="chapter-item" style="cursor:default;justify-content:center;color:var(--ink-muted);font-size:0.72rem;border-bottom:none;padding-top:8px;">… 以下略（原型）</div>
+      </div>
+      <p class="hint">與詳情頁、閱讀器「目錄」進入同一頁；點章節可回到閱讀（原型）。</p>
+    </section>
+
+    <nav class="tab-bar" role="tablist" aria-label="主選單">
+      <button type="button" class="tab" role="tab" data-tab="shelf" aria-selected="false">
+        <span class="ico">📚</span>書架
+      </button>
+      <button type="button" class="tab active" role="tab" data-tab="home" aria-selected="true">
+        <span class="ico">📖</span>書城
+      </button>
+      <button type="button" class="tab" role="tab" data-tab="category" aria-selected="false">
+        <span class="ico">🗂</span>分類
+      </button>
+      <button type="button" class="tab" role="tab" data-tab="profile" aria-selected="false">
+        <span class="ico">👤</span>我的
+      </button>
+    </nav>
+  </div>
+
+  <!-- 閱讀器 -->
+  <div id="reader" class="reader-screen" aria-hidden="true">
+    <div class="reader-dim" id="readerDim"></div>
+    <div class="reader-bar">
+      <button type="button" data-close-reader>‹ 返回</button>
+      <div class="reader-title">第 1 章 起風了</div>
+      <button type="button" id="btnReaderToc" style="font-size:0.72rem;background:none;border:none;color:inherit;cursor:pointer;">目錄</button>
+    </div>
+    <div class="reader-body" id="readerBody">
+      <p>這是一段示範正文。下方「閱讀設定」可調字體、行距、背景與亮度。</p>
+      <p>目標讀者為香港、澳門、台灣與東南亞等使用繁體中文的海外用戶。</p>
+      <p>（實際產品將載入章節正文，並依權限顯示解鎖／付費入口。）</p>
+    </div>
+    <div class="reader-tools">
+      <button type="button">上一章</button>
+      <button type="button" class="primary-a" id="btnReaderSettings">閱讀設定</button>
+      <button type="button" id="btnReaderNight">日／夜</button>
+      <button type="button">下一章</button>
+    </div>
+
+    <div class="reader-settings" id="readerSettings">
+      <div class="rs-handle"></div>
+      <div class="rs-title">閱讀設定</div>
+      <div class="rs-row">
+        <label>字體大小</label>
+        <div class="rs-font-ctrl">
+          <button type="button" id="fontMinus" aria-label="縮小">A−</button>
+          <button type="button" id="fontPlus" aria-label="放大">A+</button>
+        </div>
+      </div>
+      <div class="rs-row">
+        <label>行距</label>
+        <div class="rs-chips" id="lineChips">
+          <button type="button" data-lh="1.65">緊湊</button>
+          <button type="button" class="on" data-lh="1.95">舒適</button>
+          <button type="button" data-lh="2.25">寬鬆</button>
+        </div>
+      </div>
+      <div class="rs-row">
+        <label>背景色</label>
+        <div class="rs-colors" id="bgColors">
+          <button type="button" class="on" data-bg="#1e1c1a" data-fg="#e8e4dc" style="background:#1e1c1a;" title="夜幕"></button>
+          <button type="button" data-bg="#f4f1e8" data-fg="#2a2620" style="background:#f4f1e8;border:1px solid #ccc;" title="紙張"></button>
+          <button type="button" data-bg="#e8f0e8" data-fg="#1e2a1e" style="background:#e8f0e8;" title="護眼綠"></button>
+          <button type="button" data-bg="#f0e6d8" data-fg="#2a2218" style="background:#f0e6d8;" title="羊皮紙"></button>
+        </div>
+      </div>
+      <div class="rs-row">
+        <label>亮度</label>
+        <div class="rs-brightness">
+          <input type="range" id="brightness" min="0.65" max="1" step="0.05" value="1" />
+        </div>
+      </div>
+      <div class="rs-row">
+        <label>翻頁</label>
+        <div class="rs-chips" id="turnChips">
+          <button type="button" class="on" data-turn="scroll">上下滾動</button>
+          <button type="button" data-turn="tap">左右輕點</button>
+        </div>
+      </div>
+      <button type="button" class="rs-done" id="rsDone">完成</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll(".tab");
+      var appShell = document.getElementById("appShell");
+      var screens = {
+        shelf: document.getElementById("screen-shelf"),
+        home: document.getElementById("screen-home"),
+        category: document.getElementById("screen-category"),
+        profile: document.getElementById("screen-profile"),
+        search: document.getElementById("screen-search"),
+        catlist: document.getElementById("screen-catlist"),
+        vippurchase: document.getElementById("screen-vippurchase"),
+        coinpurchase: document.getElementById("screen-coinpurchase"),
+        consumelog: document.getElementById("screen-consumelog"),
+        rechargeorders: document.getElementById("screen-rechargeorders"),
+        browsehistory: document.getElementById("screen-browsehistory"),
+        couponlist: document.getElementById("screen-couponlist"),
+        detail: document.getElementById("screen-detail"),
+        chapterlist: document.getElementById("screen-chapterlist"),
+      };
+
+      var topBrand = document.getElementById("topBrand");
+      var topSub = document.getElementById("topSub");
+      var btnSearch = document.getElementById("btnSearch");
+      var btnHeaderBack = document.getElementById("btnHeaderBack");
+
+      var lastMainTab = "home";
+      var screenBeforeSub = "home";
+      var currentCatName = "都市";
+      /** 目錄頁若從閱讀器進入，返回時需一併恢復閱讀器 */
+      var chapterlistFromReader = false;
+
+      var titles = {
+        shelf: { t: "書架", s: "最近閱讀 · 收藏" },
+        home: { t: "書城", s: "精選 · 推薦 · 付費閱讀" },
+        category: { t: "分類", s: "題材瀏覽 · 快速找書" },
+        profile: { t: "我的", s: "會員 · 帳戶 · 訂單" },
+        detail: { t: "書籍詳情", s: "目錄 · 試讀" },
+        search: { t: "搜尋", s: "書名 · 作者 · 標籤" },
+        catlist: { t: "作品列表", s: "排序篩選" },
+        vippurchase: { t: "會員購買", s: "包月套餐 · 規則與支付" },
+        coinpurchase: { t: "書幣購買", s: "儲值檔位 · 支付" },
+        consumelog: { t: "消費記錄", s: "書幣變動明細" },
+        rechargeorders: { t: "充值訂單", s: "我的儲值訂單" },
+        browsehistory: { t: "瀏覽記錄", s: "最近看過的書" },
+        couponlist: { t: "優惠券", s: "餘額／面額 · 狀態" },
+        chapterlist: { t: "目錄", s: "章節列表 · 解鎖狀態" },
+      };
+
+      function setBrandTitle(t, s) {
+        for (var i = 0; i < topBrand.childNodes.length; i++) {
+          if (topBrand.childNodes[i].nodeType === 3) {
+            topBrand.childNodes[i].textContent = t;
+            break;
+          }
+        }
+        topSub.textContent = s || "";
+      }
+
+      function setTopBarMain(tab) {
+        var x = titles[tab];
+        if (!x) return;
+        setBrandTitle(x.t, x.s);
+        var showSearchIcon = tab === "home" || tab === "category" || tab === "shelf";
+        btnSearch.classList.toggle("hidden", !showSearchIcon);
+      }
+
+      function showScreen(name) {
+        var isSub =
+          name === "search" ||
+          name === "catlist" ||
+          name === "vippurchase" ||
+          name === "coinpurchase" ||
+          name === "consumelog" ||
+          name === "rechargeorders" ||
+          name === "browsehistory" ||
+          name === "couponlist" ||
+          name === "chapterlist" ||
+          name === "detail";
+        appShell.classList.toggle("sub-page", isSub);
+        btnHeaderBack.classList.toggle("hidden", !isSub);
+
+        if (name === "search") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.search.t, titles.search.s);
+        } else if (name === "catlist") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(currentCatName === "全部" ? "全部分類" : currentCatName, "排序篩選");
+        } else if (name === "vippurchase") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.vippurchase.t, titles.vippurchase.s);
+        } else if (name === "coinpurchase") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.coinpurchase.t, titles.coinpurchase.s);
+          var balEl = document.getElementById("profileBalanceNum");
+          var coinBalShow = document.getElementById("coinPurchaseBalanceShow");
+          if (balEl && coinBalShow) coinBalShow.textContent = balEl.textContent;
+        } else if (name === "consumelog") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.consumelog.t, titles.consumelog.s);
+        } else if (name === "rechargeorders") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.rechargeorders.t, titles.rechargeorders.s);
+        } else if (name === "browsehistory") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.browsehistory.t, titles.browsehistory.s);
+        } else if (name === "couponlist") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.couponlist.t, titles.couponlist.s);
+        } else if (name === "chapterlist") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.chapterlist.t, titles.chapterlist.s);
+        } else if (name === "detail") {
+          btnSearch.classList.add("hidden");
+          setBrandTitle(titles.detail.t, titles.detail.s);
+        } else {
+          setTopBarMain(name);
+        }
+
+        Object.keys(screens).forEach(function (key) {
+          if (screens[key]) screens[key].classList.remove("active");
+        });
+        if (screens[name]) screens[name].classList.add("active");
+
+        if (["shelf", "home", "category", "profile"].indexOf(name) >= 0) {
+          lastMainTab = name;
+          tabs.forEach(function (t) {
+            var on = t.getAttribute("data-tab") === name;
+            t.classList.toggle("active", on);
+            t.setAttribute("aria-selected", on ? "true" : "false");
+          });
+        }
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          showScreen(tab.getAttribute("data-tab"));
+        });
+      });
+
+      btnSearch.addEventListener("click", function () {
+        screenBeforeSub = lastMainTab;
+        showScreen("search");
+      });
+
+      btnHeaderBack.addEventListener("click", function () {
+        var active = document.querySelector(".screen.active");
+        if (!active) return;
+        var id = active.id;
+        if (id === "screen-search") {
+          showScreen(screenBeforeSub || "home");
+        } else if (id === "screen-catlist") {
+          showScreen("category");
+        } else if (id === "screen-chapterlist") {
+          var backToReader = chapterlistFromReader;
+          chapterlistFromReader = false;
+          showScreen("detail");
+          if (backToReader) openReader();
+        } else if (id === "screen-detail") {
+          showScreen(screenBeforeSub || "home");
+        } else if (id === "screen-vippurchase") {
+          showScreen("profile");
+        } else if (
+          id === "screen-coinpurchase" ||
+          id === "screen-consumelog" ||
+          id === "screen-rechargeorders" ||
+          id === "screen-browsehistory" ||
+          id === "screen-couponlist"
+        ) {
+          showScreen("profile");
+        }
+      });
+
+      document.getElementById("vipMonthEntry").addEventListener("click", function () {
+        showScreen("vippurchase");
+      });
+
+      document.getElementById("btnVipPurchaseMock").addEventListener("click", function () {
+        alert("原型：此處接支付／下單；購買成功後開啟每日領幣。");
+      });
+
+      document.getElementById("catGrid").addEventListener("click", function (e) {
+        var cell = e.target.closest(".cat-cell[data-cat]");
+        if (!cell) return;
+        var cn = cell.getAttribute("data-cat") || "分類";
+        currentCatName = cn;
+        document.getElementById("catListTitle").textContent = cn === "全部" ? "全部 · 作品列表" : cn + " · 作品列表";
+        screenBeforeSub = "category";
+        showScreen("catlist");
+      });
+
+      document.querySelectorAll("[data-goto]").forEach(function (el) {
+        el.addEventListener("click", function () {
+          var g = el.getAttribute("data-goto");
+          if (g === "detail") {
+            var active = document.querySelector(".screen.active");
+            screenBeforeSub = active ? active.id.replace("screen-", "") : "home";
+            showScreen("detail");
+          } else if (g === "chapterlist") {
+            chapterlistFromReader = false;
+            showScreen("chapterlist");
+          } else if (g === "reader") {
+            openReader();
+          }
+        });
+      });
+
+      document.getElementById("btnReaderToc").addEventListener("click", function () {
+        chapterlistFromReader = true;
+        var r = document.getElementById("reader");
+        r.classList.remove("open");
+        r.setAttribute("aria-hidden", "true");
+        document.getElementById("readerSettings").classList.remove("open");
+        document.getElementById("readerDim").classList.remove("show");
+        showScreen("chapterlist");
+      });
+
+      document.querySelectorAll("[data-back]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          showScreen(screenBeforeSub || lastMainTab || "home");
+        });
+      });
+
+      function openReader() {
+        document.getElementById("reader").classList.add("open");
+        document.getElementById("reader").setAttribute("aria-hidden", "false");
+      }
+
+      document.querySelector("[data-close-reader]")?.addEventListener("click", function () {
+        document.getElementById("reader").classList.remove("open");
+        document.getElementById("reader").setAttribute("aria-hidden", "true");
+        document.getElementById("readerSettings").classList.remove("open");
+        document.getElementById("readerDim").classList.remove("show");
+      });
+
+      document.getElementById("chips")?.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t.classList.contains("chip")) return;
+        document.querySelectorAll("#chips .chip").forEach(function (c) {
+          c.classList.remove("active");
+        });
+        t.classList.add("active");
+      });
+
+      /* 分類列表：排序文案 */
+      var sortLabels = {
+        hot: "熱門指數",
+        pay: "付費額",
+        fav: "收藏數",
+        words: "字數",
+        update: "更新",
+      };
+
+      document.getElementById("sortScroll").addEventListener("click", function (e) {
+        var b = e.target.closest(".sort-pill");
+        if (!b) return;
+        document.querySelectorAll("#sortScroll .sort-pill").forEach(function (x) {
+          x.classList.remove("on");
+        });
+        b.classList.add("on");
+        var sort = b.getAttribute("data-sort");
+        var label = sortLabels[sort] || sortLabels.hot;
+        document.querySelectorAll("#listBlockRank .stat").forEach(function (el, idx) {
+          el.textContent = label + " · " + (98 - idx * 4);
+        });
+      });
+
+      /* 閱讀設定 */
+      var rs = document.getElementById("readerSettings");
+      var readerBody = document.getElementById("readerBody");
+      var readerScreen = document.getElementById("reader");
+      var fontSize = 1.05;
+
+      document.getElementById("btnReaderSettings").addEventListener("click", function () {
+        rs.classList.add("open");
+        document.getElementById("readerDim").classList.add("show");
+      });
+      document.getElementById("readerDim").addEventListener("click", function () {
+        rs.classList.remove("open");
+        document.getElementById("readerDim").classList.remove("show");
+      });
+      document.getElementById("rsDone").addEventListener("click", function () {
+        rs.classList.remove("open");
+        document.getElementById("readerDim").classList.remove("show");
+      });
+
+      document.getElementById("fontMinus").addEventListener("click", function () {
+        fontSize = Math.max(0.85, Math.round((fontSize - 0.08) * 100) / 100);
+        readerBody.style.setProperty("--reader-font", fontSize + "rem");
+      });
+      document.getElementById("fontPlus").addEventListener("click", function () {
+        fontSize = Math.min(1.45, Math.round((fontSize + 0.08) * 100) / 100);
+        readerBody.style.setProperty("--reader-font", fontSize + "rem");
+      });
+
+      document.getElementById("lineChips").addEventListener("click", function (e) {
+        var b = e.target.closest("button");
+        if (!b || !b.getAttribute("data-lh")) return;
+        document.querySelectorAll("#lineChips button").forEach(function (x) {
+          x.classList.remove("on");
+        });
+        b.classList.add("on");
+        readerBody.style.setProperty("--reader-lh", b.getAttribute("data-lh"));
+      });
+
+      document.getElementById("bgColors").addEventListener("click", function (e) {
+        var b = e.target.closest("button");
+        if (!b || !b.getAttribute("data-bg")) return;
+        document.querySelectorAll("#bgColors button").forEach(function (x) {
+          x.classList.remove("on");
+        });
+        b.classList.add("on");
+        var bg = b.getAttribute("data-bg");
+        var fg = b.getAttribute("data-fg");
+        readerScreen.style.setProperty("--reader-bg", bg);
+        readerScreen.style.setProperty("--reader-fg", fg);
+        readerBody.style.color = fg;
+      });
+
+      document.getElementById("brightness").addEventListener("input", function () {
+        readerBody.style.opacity = this.value;
+      });
+
+      document.getElementById("turnChips").addEventListener("click", function (e) {
+        var b = e.target.closest("button");
+        if (!b) return;
+        document.querySelectorAll("#turnChips button").forEach(function (x) {
+          x.classList.remove("on");
+        });
+        b.classList.add("on");
+      });
+
+      var night = false;
+      document.getElementById("btnReaderNight").addEventListener("click", function () {
+        night = !night;
+        if (night) {
+          readerScreen.style.setProperty("--reader-bg", "#1e1c1a");
+          readerScreen.style.setProperty("--reader-fg", "#e8e4dc");
+          readerBody.style.color = "#e8e4dc";
+        } else {
+          readerScreen.style.setProperty("--reader-bg", "#f4f1e8");
+          readerScreen.style.setProperty("--reader-fg", "#2a2620");
+          readerBody.style.color = "#2a2620";
+        }
+      });
+
+      document.getElementById("btnTopup").addEventListener("click", function () {
+        screenBeforeSub = "profile";
+        showScreen("coinpurchase");
+      });
+      document.getElementById("btnConsumeLog").addEventListener("click", function () {
+        screenBeforeSub = "profile";
+        showScreen("consumelog");
+      });
+
+      document.getElementById("screen-profile").addEventListener("click", function (e) {
+        var openItem = e.target.closest("[data-open-screen]");
+        if (!openItem) return;
+        screenBeforeSub = "profile";
+        showScreen(openItem.getAttribute("data-open-screen"));
+      });
+
+      document.getElementById("screen-coinpurchase").addEventListener("click", function (e) {
+        var pkg = e.target.closest("[data-coin-mock]");
+        if (!pkg) return;
+        alert("原型：選擇 NT$ " + pkg.getAttribute("data-coin-mock") + " 檔，此處接支付與到帳。");
+      });
+
+      document.getElementById("couponFilterBar").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-coupon-filter]");
+        if (!b) return;
+        document.querySelectorAll("#couponFilterBar .chip").forEach(function (c) {
+          c.classList.remove("on");
+        });
+        b.classList.add("on");
+        var f = b.getAttribute("data-coupon-filter");
+        document.querySelectorAll("#screen-couponlist .coupon-row").forEach(function (card) {
+          var st = card.getAttribute("data-coupon-state");
+          var show =
+            f === "all" ||
+            (f === "normal" && st === "normal") ||
+            (f === "depleted" && st === "depleted") ||
+            (f === "expired" && st === "expired");
+          card.style.display = show ? "" : "none";
+        });
+      });
+
+      setTopBarMain("home");
+    })();
+  </script>
+</body>
+</html>
