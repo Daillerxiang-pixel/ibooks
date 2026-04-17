@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import * as path from "path";
+import crypto from "crypto";
 import { User } from "../src/entities/user.entity.js";
 import { Book } from "../src/entities/book.entity.js";
 import { Chapter } from "../src/entities/chapter.entity.js";
@@ -28,6 +29,9 @@ async function seed() {
     { title: "完美世界", author: "辰东", category: "玄幻", status: "完结", word_count: 480000, chapter_count: 1288 },
   ];
 
+  /** 演示用：付費加密章共用一把 DEK（生產環境應每章或每訂單獨立密鑰/KMS） */
+  const demoPaidDekBase64 = crypto.randomBytes(32).toString("base64");
+
   for (const bookData of booksData) {
     const existing = await bookRepo.findOne({ where: { title: bookData.title } });
     if (!existing) {
@@ -43,12 +47,20 @@ async function seed() {
 
       // Seed chapters for each book
       for (let i = 1; i <= 10; i++) {
+        const isFree = i <= 5;
+        const ossUrl = `https://cdn.example.com/ibooks-demo/book-${book.id}/chapter-${i}.json`;
         const chapter = chapterRepo.create({
           book_id: book.id,
           chapter_num: i,
           title: `第${i}章 测试章节`,
-          content: `这是第${i}章的内容。主角在这一章经历了精彩的冒险，遇到了重要的人物，剧情跌宕起伏，扣人心弦...（此处省略2000字）`,
-          price: i <= 5 ? 0 : 5,
+          /** 舊版 inline 已廢棄時可全 null；此處付費章保留試讀片段供鎖章提示 */
+          content: isFree
+            ? null
+            : `【付費預覽】第${i}章試讀。購買後請依 OSS 地址下載加密 JSON，並使用 API 返回的 contentKeyBase64 解密。`,
+          content_oss_urls: JSON.stringify([ossUrl]),
+          content_is_encrypted: !isFree,
+          content_unlock_key_base64: isFree ? null : demoPaidDekBase64,
+          price: isFree ? 0 : 5,
           word_count: 2000,
         });
         await chapterRepo.save(chapter);

@@ -29,8 +29,29 @@
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|------|
-| GET | /:id | 章节内容 | 可选 |
+| GET | /:id | 章节内容（见下「交付模式」） | 可选 |
 | POST | /:id/read | 记录进度 | 是 |
+
+#### 章节正文交付模式（与 Flutter `docs/BACKEND_CHAPTER_CONTENT.md` 一致）
+
+- **OSS 模式**（`chapters` 表配置了 `content_oss_urls` JSON 数组）  
+  - 库内**不再**返回完整正文，返回 `ossUrls`；客户端自行下载 JSON。  
+  - **免费章**：返回 `ossUrls`，`isEncrypted`；明文 OSS 时 `contentKeyBase64` 为 `null`。  
+  - **付费章**：未购买仅返回 `preview`（可用库内 `content` 试读片段）；**已购买**返回 `ossUrls` + `isEncrypted` +（若加密）`contentKeyBase64`。  
+- **inline 模式**（未配置 OSS 时兼容旧数据）：仍返回 `data.content` 正文字符串。
+
+成功响应 `data` 字段示例（OSS + 已购付费加密章）：
+
+```json
+{
+  "deliveryMode": "oss",
+  "id": 1,
+  "title": "第6章 …",
+  "ossUrls": ["https://cdn.example.com/.../chapter-6.json"],
+  "isEncrypted": true,
+  "contentKeyBase64": "<仅已购且加密时返回>"
+}
+```
 
 ### 订单 API (`/api/orders`)
 
@@ -68,7 +89,7 @@ npm start     # 启动服务
 |------|------|
 | users | 用户 |
 | books | 书籍 |
-| chapters | 章节 |
+| chapters | 章节（含 `content_oss_urls`、`content_is_encrypted`、`content_unlock_key_base64`；`content` 可为空） |
 | orders | 订单 |
 | user_purchases | 已购章节 |
 | user_shelf | 用户书架 |

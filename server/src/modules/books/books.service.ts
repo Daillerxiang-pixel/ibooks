@@ -29,13 +29,29 @@ export class BooksService {
       where: { book_id: bookId },
       order: { chapter_num: 'ASC' },
     });
-    return { success: true, data: chapters.map(ch => ({
-      id: ch.id,
-      chapter_num: ch.chapter_num,
-      title: ch.title,
-      price: ch.price,
-      word_count: ch.word_count,
-      is_free: ch.price === 0,
-    }))};
+    return {
+      success: true,
+      data: chapters.map((ch) => ({
+        id: ch.id,
+        chapter_num: ch.chapter_num,
+        title: ch.title,
+        price: ch.price,
+        word_count: ch.word_count,
+        is_free: Number(ch.price) === 0,
+        /** 與 Flutter：正文走 OSS JSON 或舊版庫內 inline */
+        delivery_mode: this.hasOssUrls(ch) ? 'oss' : 'inline',
+        is_encrypted: ch.content_is_encrypted,
+      })),
+    };
+  }
+
+  private hasOssUrls(ch: Chapter): boolean {
+    if (!ch.content_oss_urls) return false;
+    try {
+      const u = JSON.parse(ch.content_oss_urls) as unknown;
+      return Array.isArray(u) && u.length > 0;
+    } catch {
+      return false;
+    }
   }
 }
