@@ -1,11 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_config.dart';
 import '../../src/data/ibooks_repository.dart';
 import '../../theme/ibooks_colors.dart';
 import '../../widgets/book_covers.dart';
@@ -210,7 +207,6 @@ class _HomeTabState extends State<HomeTab> {
             final b = _books;
             if (b != null && b.isNotEmpty) context.push('/detail/${b.first.id}');
           },
-          maxWidth: math.min(420, MediaQuery.sizeOf(context).width),
         ),
         const SectionTitleRow(title: '完結經典 · 一口價', marginTop: 8),
         SizedBox(
@@ -315,16 +311,11 @@ class _ApiHCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: AppConfig.resolvePublicUrl(book.coverUrl) != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          AppConfig.resolvePublicUrl(book.coverUrl)!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const BookCover(variant: 1, borderRadius: 12),
-                        ),
-                      )
-                    : const BookCover(variant: 1, borderRadius: 12),
+                child: NetworkBookCover(
+                  coverUrl: book.coverUrl,
+                  borderRadius: 12,
+                  aspectRatio: 3 / 4,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
@@ -503,10 +494,9 @@ class _RankRow extends StatelessWidget {
 }
 
 class _GuessGrid extends StatelessWidget {
-  const _GuessGrid({required this.onDetail, required this.maxWidth});
+  const _GuessGrid({required this.onDetail});
 
   final VoidCallback onDetail;
-  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -518,51 +508,56 @@ class _GuessGrid extends StatelessWidget {
       (5, '半城煙火', '古言', false, false),
       (6, '星塵旅人', '科幻', false, false),
     ];
-    final cellW = (maxWidth - 28 - 16) / 3;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 12,
-      children: items.map((e) {
-        return SizedBox(
-          width: cellW,
-          child: InkWell(
-            onTap: onDetail,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Stack(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final cellW = (maxWidth - 28 - 16) / 3;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 12,
+          children: items.map((e) {
+            return SizedBox(
+              width: cellW,
+              child: InkWell(
+                onTap: onDetail,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    BookCover(variant: e.$1, borderRadius: 10),
-                    if (e.$4)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(color: IbColors.accent, borderRadius: BorderRadius.circular(5)),
-                          child: Text('VIP', style: GoogleFonts.notoSansTc(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    if (e.$5)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(color: IbColors.gold, borderRadius: BorderRadius.circular(5)),
-                          child: Text('限免', style: GoogleFonts.notoSansTc(fontSize: 9, color: IbColors.ink, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
+                    Stack(
+                      children: [
+                        BookCover(variant: e.$1, borderRadius: 10),
+                        if (e.$4)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(color: IbColors.accent, borderRadius: BorderRadius.circular(5)),
+                              child: Text('VIP', style: GoogleFonts.notoSansTc(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                        if (e.$5)
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(color: IbColors.gold, borderRadius: BorderRadius.circular(5)),
+                              child: Text('限免', style: GoogleFonts.notoSansTc(fontSize: 9, color: IbColors.ink, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(e.$2, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.notoSansTc(fontSize: 11.5, fontWeight: FontWeight.w500)),
+                    Text(e.$3, style: GoogleFonts.notoSansTc(fontSize: 9.9, color: IbColors.inkMuted)),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(e.$2, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.notoSansTc(fontSize: 11.5, fontWeight: FontWeight.w500)),
-                Text(e.$3, style: GoogleFonts.notoSansTc(fontSize: 9.9, color: IbColors.inkMuted)),
-              ],
-            ),
-          ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }

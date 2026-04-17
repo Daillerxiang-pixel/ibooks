@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../src/api/api_exception.dart';
 import '../src/data/ibooks_repository.dart';
 import '../src/data/session_controller.dart';
+import '../theme/app_layout.dart';
 import '../theme/ibooks_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -73,9 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         title: Text('登入', style: GoogleFonts.notoSansTc(fontWeight: FontWeight.w600)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = math.min(
+            AppLayout.contentMaxWidth,
+            constraints.maxWidth - AppLayout.screenGutter * 2,
+          );
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxW),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                children: [
           Text(
             '閱讀章節正文需登入（後端 JWT）。測試可註冊新帳號。',
             style: GoogleFonts.notoSansTc(fontSize: 12.5, color: IbColors.inkMuted, height: 1.5),
@@ -126,7 +138,11 @@ class _LoginScreenState extends State<LoginScreen> {
             onPressed: _busy ? null : () => setState(() => _registerMode = !_registerMode),
             child: Text(_registerMode ? '已有帳號？改為登入' : '沒有帳號？註冊'),
           ),
-        ],
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

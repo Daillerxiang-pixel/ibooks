@@ -26,7 +26,7 @@ class AppConfig {
     if (path == null || path.isEmpty) return null;
     final p = path.trim();
     if (p.startsWith('http://') || p.startsWith('https://')) return p;
-    if (p.startsWith('/')) return '${siteOrigin}$p';
-    return '${siteOrigin}/$p';
+    if (p.startsWith('/')) return '$siteOrigin$p';
+    return '$siteOrigin/$p';
   }
 }

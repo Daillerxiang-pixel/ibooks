@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
 import '../router/chapter_list_args.dart';
 import '../src/data/ibooks_repository.dart';
 import '../theme/ibooks_colors.dart';
@@ -87,19 +86,11 @@ class _DetailScreenState extends State<DetailScreen> {
                       children: [
                         SizedBox(
                           width: 104,
-                          child: AppConfig.resolvePublicUrl(b?.coverUrl) != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: AspectRatio(
-                                    aspectRatio: 3 / 4,
-                                    child: Image.network(
-                                      AppConfig.resolvePublicUrl(b!.coverUrl)!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const BookCover(variant: 1, borderRadius: 10),
-                                    ),
-                                  ),
-                                )
-                              : const BookCover(variant: 1, borderRadius: 10),
+                          child: NetworkBookCover(
+                            coverUrl: b?.coverUrl,
+                            borderRadius: 10,
+                            aspectRatio: 3 / 4,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(

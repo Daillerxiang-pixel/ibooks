@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +12,7 @@ import '../src/data/chapter_content_repository.dart';
 import '../src/data/ibooks_repository.dart';
 import '../src/domain/chapter_body.dart';
 import '../src/domain/chapter_meta.dart';
+import '../theme/app_layout.dart';
 import '../theme/ibooks_colors.dart';
 
 class ReaderScreen extends StatefulWidget {
@@ -141,9 +144,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
     return Scaffold(
       backgroundColor: IbColors.readerBg,
-      body: SafeArea(
-        child: Column(
-          children: [
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = math.min(
+            AppLayout.contentMaxWidth,
+            constraints.maxWidth - AppLayout.screenGutter * 2,
+          );
+          return SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxW),
+                child: Column(
+                  children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
@@ -233,8 +245,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 ],
               ),
             ),
-          ],
-        ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

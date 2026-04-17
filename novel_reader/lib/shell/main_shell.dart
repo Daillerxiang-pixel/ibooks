@@ -1,12 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../router/app_router.dart';
+import '../theme/app_layout.dart';
 import '../theme/ibooks_colors.dart';
 import '../widgets/ibooks_shell_header.dart';
 import '../widgets/ibooks_tab_bar.dart';
 
-/// 主殼：max-width 420、底部四 Tab（對齊原型）
+/// 主殼：內容區限寬並兩側留白，底部四 Tab（對齊原型）
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -29,41 +32,49 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: IbColors.bg,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
-            decoration: BoxDecoration(
-              color: IbColors.bg,
-              boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 0)],
-              border: Border.all(color: IbColors.line),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxW = math.min(
+            AppLayout.contentMaxWidth,
+            constraints.maxWidth - AppLayout.screenGutter * 2,
+          );
+          return Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxW),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: IbColors.bg,
+                  boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 0)],
+                  border: Border.all(color: IbColors.line),
+                ),
+                child: Column(
+                  children: [
+                    IbShellHeader(
+                      title: _titles[_tab],
+                      subtitle: _subs[_tab],
+                      onSearch: () => context.push('/search'),
+                    ),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _tab,
+                        children: [
+                          AppRouter.tabForIndex(0),
+                          AppRouter.tabForIndex(1),
+                          AppRouter.tabForIndex(2),
+                          AppRouter.tabForIndex(3),
+                        ],
+                      ),
+                    ),
+                    IbTabBar(
+                      currentIndex: _tab,
+                      onChanged: (i) => setState(() => _tab = i),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: Column(
-              children: [
-                IbShellHeader(
-                  title: _titles[_tab],
-                  subtitle: _subs[_tab],
-                  onSearch: () => context.push('/search'),
-                ),
-                Expanded(
-                  child: IndexedStack(
-                    index: _tab,
-                    children: [
-                      AppRouter.tabForIndex(0),
-                      AppRouter.tabForIndex(1),
-                      AppRouter.tabForIndex(2),
-                      AppRouter.tabForIndex(3),
-                    ],
-                  ),
-                ),
-                IbTabBar(
-                  currentIndex: _tab,
-                  onChanged: (i) => setState(() => _tab = i),
-                ),
-              ],
-            ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
