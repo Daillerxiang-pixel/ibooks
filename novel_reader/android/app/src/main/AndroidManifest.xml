@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release 包必須顯式聲明 INTERNET，否則 https 請求 errno=7 / Failed host lookup -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:label="novel_reader"
         android:name="${applicationName}"
