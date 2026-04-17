@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../../src/data/ibooks_repository.dart';
 import '../../theme/ibooks_colors.dart';
 import '../../widgets/book_covers.dart';
 import '../../widgets/section_title_row.dart' show SectionTitleRow, HintLine;
@@ -18,13 +20,100 @@ class HomeTab extends StatefulWidget {
 class _HomeTabState extends State<HomeTab> {
   int _chip = 0;
   final _chips = const ['都市', '古言', '玄幻', '懸疑', '甜寵'];
+  List<BookRow>? _books;
+  String? _apiErr;
+  bool _loadingBooks = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBooks());
+  }
+
+  void _openFirstBookDetail(BuildContext context) {
+    final b = _books;
+    if (b != null && b.isNotEmpty) {
+      context.push('/detail/${b.first.id}');
+    }
+  }
+
+  Future<void> _loadBooks() async {
+    setState(() {
+      _loadingBooks = true;
+      _apiErr = null;
+    });
+    try {
+      final list = await context.read<IbooksRepository>().listBooks();
+      if (!mounted) return;
+      setState(() {
+        _books = list;
+        _loadingBooks = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _apiErr = e.toString();
+        _loadingBooks = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.only(top: 12),
       children: [
-        _HeroBanner(onTap: () => context.push('/detail')),
+        _HeroBanner(onTap: () {
+          final first = _books;
+          if (first != null && first.isNotEmpty) {
+            context.push('/detail/${first.first.id}');
+          }
+        }),
+        if (_apiErr != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: Material(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(10),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(_apiErr!, style: GoogleFonts.notoSansTc(fontSize: 12, color: Colors.red.shade800))),
+                    TextButton(onPressed: _loadBooks, child: const Text('重試')),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (_loadingBooks)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_books != null && _books!.isNotEmpty)
+          SectionTitleRow(
+            title: '書城（後端 /api/books）',
+            marginTop: 4,
+            trailing: Text('${ _books!.length } 本', style: GoogleFonts.notoSansTc(fontSize: 12, color: IbColors.accent)),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Text('暫無上架書籍（請在後端入庫）', style: GoogleFonts.notoSansTc(fontSize: 12.5, color: IbColors.inkMuted)),
+          ),
+        if (_books != null && _books!.isNotEmpty)
+          SizedBox(
+            height: 200,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              children: [
+                for (var i = 0; i < _books!.length && i < 12; i++)
+                  _ApiHCard(_books![i], () => context.push('/detail/${_books![i].id}')),
+              ],
+            ),
+          ),
         SectionTitleRow(
           title: '本週強推',
           marginTop: 16,
@@ -50,10 +139,10 @@ class _HomeTabState extends State<HomeTab> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             children: [
-              _HCard(1, '霓虹深處的約定', () => context.push('/detail')),
-              _HCard(2, '海風與舊信箋', () => context.push('/detail'), v2: true),
-              _HCard(1, '南洋夜雨錄', () => context.push('/detail')),
-              _HCard(2, '霧島心事', () => context.push('/detail'), v2: true),
+              _HCard(1, '霓虹深處的約定', () => _openFirstBookDetail(context)),
+              _HCard(2, '海風與舊信箋', () => _openFirstBookDetail(context), v2: true),
+              _HCard(1, '南洋夜雨錄', () => _openFirstBookDetail(context)),
+              _HCard(2, '霧島心事', () => _openFirstBookDetail(context), v2: true),
             ],
           ),
         ),
@@ -69,7 +158,7 @@ class _HomeTabState extends State<HomeTab> {
                 tag: '整本優惠',
                 title: '批量購 8 折',
                 sub: '整本解鎖更省 · 限時 48 小時',
-                onTap: () => context.push('/detail'),
+                onTap: () => _openFirstBookDetail(context),
               ),
               const SizedBox(width: 10),
               _WideCard(
@@ -77,7 +166,7 @@ class _HomeTabState extends State<HomeTab> {
                 tag: '會員專區',
                 title: '會員暢讀書庫',
                 sub: '標籤內作品暢讀 · 詳見會員權益',
-                onTap: () => context.push('/detail'),
+                onTap: () => _openFirstBookDetail(context),
               ),
             ],
           ),
@@ -104,14 +193,22 @@ class _HomeTabState extends State<HomeTab> {
           marginTop: 12,
           trailing: Text('完整榜單', style: GoogleFonts.notoSansTc(fontSize: 12, color: IbColors.accent)),
         ),
-        _RankBox(onDetail: () => context.push('/detail')),
+        _RankBox(
+          onDetail: () {
+            final b = _books;
+            if (b != null && b.isNotEmpty) context.push('/detail/${b.first.id}');
+          },
+        ),
         SectionTitleRow(
           title: '猜你喜歡',
           marginTop: 8,
           trailing: Text('換一批', style: GoogleFonts.notoSansTc(fontSize: 12, color: IbColors.accent)),
         ),
         _GuessGrid(
-          onDetail: () => context.push('/detail'),
+          onDetail: () {
+            final b = _books;
+            if (b != null && b.isNotEmpty) context.push('/detail/${b.first.id}');
+          },
           maxWidth: math.min(420, MediaQuery.sizeOf(context).width),
         ),
         const SectionTitleRow(title: '完結經典 · 一口價', marginTop: 8),
@@ -121,9 +218,9 @@ class _HomeTabState extends State<HomeTab> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 14),
             children: [
-              _HCard(2, '海風與舊信箋\n全本特惠', () => context.push('/detail'), v2: true, accentSub: true),
-              _HCard(4, '霧島心事\n全本一口價', () => context.push('/detail'), accentSub: true),
-              _HCard(5, '半城煙火\n全本特惠', () => context.push('/detail'), v2: true, accentSub: true),
+              _HCard(2, '海風與舊信箋\n全本特惠', () => _openFirstBookDetail(context), v2: true, accentSub: true),
+              _HCard(4, '霧島心事\n全本一口價', () => _openFirstBookDetail(context), accentSub: true),
+              _HCard(5, '半城煙火\n全本特惠', () => _openFirstBookDetail(context), v2: true, accentSub: true),
             ],
           ),
         ),
@@ -194,6 +291,51 @@ class _HeroBanner extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(99),
         color: on ? Colors.white : Colors.white.withValues(alpha: 0.35),
+      ),
+    );
+  }
+}
+
+class _ApiHCard extends StatelessWidget {
+  const _ApiHCard(this.book, this.onTap);
+
+  final BookRow book;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 132,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: book.coverUrl != null && book.coverUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          book.coverUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const BookCover(variant: 1, borderRadius: 12),
+                        ),
+                      )
+                    : const BookCover(variant: 1, borderRadius: 12),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                child: Text(
+                  book.title,
+                  maxLines: 3,
+                  style: GoogleFonts.notoSansTc(fontSize: 11.5, fontWeight: FontWeight.w500, height: 1.3),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

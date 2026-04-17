@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
-import '../../router/chapter_list_args.dart';
+import '../../src/data/session_controller.dart';
 import '../../theme/ibooks_colors.dart';
 
 class ProfileTab extends StatelessWidget {
@@ -124,6 +125,31 @@ class ProfileTab extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 14),
+        Consumer<SessionController>(
+          builder: (context, session, _) {
+            return Material(
+              color: IbColors.bgCard,
+              borderRadius: BorderRadius.circular(12),
+              child: ListTile(
+                title: Text(
+                  session.isLoggedIn ? '已登入 · ${session.nickname ?? session.user?['phone'] ?? ''}' : '未登入（閱讀章節需 JWT）',
+                  style: GoogleFonts.notoSansTc(fontSize: 13.5),
+                ),
+                trailing: TextButton(
+                  onPressed: () async {
+                    if (session.isLoggedIn) {
+                      await session.logout();
+                    } else {
+                      context.push('/login');
+                    }
+                  },
+                  child: Text(session.isLoggedIn ? '登出' : '登入 / 註冊'),
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 14),
         InkWell(

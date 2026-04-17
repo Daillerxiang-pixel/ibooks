@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'app/ibooks_app.dart';
+import 'config/app_config.dart';
 import 'router/app_router.dart';
+import 'src/api/ibooks_api_client.dart';
+import 'src/data/ibooks_repository.dart';
+import 'src/data/session_controller.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(IbooksApp(router: AppRouter.create()));
+  final session = SessionController();
+  await session.load();
+
+  final api = IbooksApiClient(tokenGetter: () => session.token);
+  final repo = IbooksRepository(api);
+
+  debugPrint('iBooks API: ${AppConfig.apiBaseUrl}');
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SessionController>.value(value: session),
+        Provider<IbooksApiClient>.value(value: api),
+        Provider<IbooksRepository>.value(value: repo),
+      ],
+      child: IbooksApp(router: AppRouter.create()),
+    ),
+  );
 }

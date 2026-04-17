@@ -8,6 +8,7 @@ import '../screens/coin_purchase_screen.dart';
 import '../screens/consume_log_screen.dart';
 import '../screens/coupon_list_screen.dart';
 import '../screens/detail_screen.dart';
+import '../screens/login_screen.dart';
 import '../screens/reader_screen.dart';
 import '../screens/recharge_orders_screen.dart';
 import '../screens/search_screen.dart';
@@ -32,6 +33,22 @@ abstract final class AppRouter {
           builder: (context, state) => const MainShell(),
         ),
         GoRoute(
+          path: '/detail',
+          redirect: (context, state) => '/',
+        ),
+        GoRoute(
+          path: '/reader',
+          redirect: (context, state) => '/',
+        ),
+        GoRoute(
+          path: '/login',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) {
+            final red = state.uri.queryParameters['redirect'];
+            return LoginScreen(redirectTo: red);
+          },
+        ),
+        GoRoute(
           path: '/search',
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const SearchScreen(),
@@ -46,23 +63,38 @@ abstract final class AppRouter {
           },
         ),
         GoRoute(
-          path: '/detail',
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (context, state) => const DetailScreen(),
-        ),
-        GoRoute(
-          path: '/chapterlist',
+          path: '/detail/:bookId',
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) {
-            final extra = state.extra;
-            final reopen = extra is ChapterListArgs && extra.reopenReader;
-            return ChapterListScreen(reopenReaderOnPop: reopen);
+            final id = int.tryParse(state.pathParameters['bookId'] ?? '') ?? 0;
+            return DetailScreen(bookId: id);
           },
         ),
         GoRoute(
-          path: '/reader',
+          path: '/chapterlist/:bookId',
           parentNavigatorKey: rootNavigatorKey,
-          builder: (context, state) => const ReaderScreen(),
+          builder: (context, state) {
+            final bookId = int.tryParse(state.pathParameters['bookId'] ?? '') ?? 0;
+            final extra = state.extra;
+            final args = extra is ChapterListArgs
+                ? extra
+                : ChapterListArgs(bookId: bookId);
+            return ChapterListScreen(
+              bookId: bookId,
+              bookTitle: args.bookTitle,
+              reopenReaderOnPop: args.reopenReader,
+              reopenChapterId: args.reopenChapterId,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/reader/:chapterId',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) {
+            final chapterId = int.tryParse(state.pathParameters['chapterId'] ?? '') ?? 0;
+            final bookId = int.tryParse(state.uri.queryParameters['bookId'] ?? '') ?? 0;
+            return ReaderScreen(chapterId: chapterId, bookId: bookId);
+          },
         ),
         GoRoute(
           path: '/vippurchase',

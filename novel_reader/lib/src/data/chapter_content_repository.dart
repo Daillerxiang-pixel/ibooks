@@ -18,7 +18,7 @@ class ChapterContentRepository {
   final http.Client _client;
   final ChapterDecryptor _decryptor;
 
-  /// 使用 [ChapterMeta]：免費章直接解析明文；付費章必須帶 [ChapterMeta.contentKeyBase64]。
+  /// 使用 [ChapterMeta]：明文 OSS 直接解析；加密 OSS（含免費測試章）需 [contentKeyBase64] 解密。
   Future<ChapterBody> loadBody(ChapterMeta meta) async {
     if (meta.contentOssUrls.isEmpty) {
       throw StateError('No OSS URLs for chapter ${meta.id}');
@@ -26,13 +26,13 @@ class ChapterContentRepository {
     final url = meta.contentOssUrls.first;
     final raw = await _fetchString(url);
 
-    if (meta.isFree) {
+    if (!meta.isEncrypted) {
       return _parsePlainJson(raw);
     }
 
     final key = meta.contentKeyBase64;
     if (key == null || key.isEmpty) {
-      throw StateError('Paid chapter ${meta.id} requires contentKeyBase64 after purchase');
+      throw StateError('Encrypted chapter ${meta.id} requires contentKeyBase64');
     }
 
     final bundle = OssEncryptedChapterBundle.parse(raw);

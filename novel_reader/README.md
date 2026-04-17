@@ -18,6 +18,28 @@ flutter run
 
 `flutter create .` 會補齊平台工程且不覆蓋現有 `lib/`。
 
+## 後端 API（已接入）
+
+- **預設 API 根**：`https://book.kanashortplay.com/api`（與 Nest 全局前綴 `/api` 一致）。
+- **覆寫**：`flutter run --dart-define=API_BASE=https://你的域名/api`
+- **已對接**：`GET /books`、`GET /books/:id`、`GET /books/:id/chapters`、`GET /chapters/:id`（需 **Bearer JWT**）、`POST /auth/login`、`POST /auth/register`。
+- Token 存於本機 `SharedPreferences`；閱讀章節前若未登入會引導 `/login`。
+
+### 編譯測試 APK
+
+```bash
+cd novel_reader
+flutter pub get
+flutter build apk --release
+# 產物：build/app/outputs/flutter-apk/app-release.apk
+```
+
+如需指定測試服：
+
+```bash
+flutter build apk --release --dart-define=API_BASE=https://book.kanashortplay.com/api
+```
+
 ## 目錄說明
 
 | 路徑 | 說明 |

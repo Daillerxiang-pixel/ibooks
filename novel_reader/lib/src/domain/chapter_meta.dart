@@ -8,6 +8,7 @@ class ChapterMeta {
     required this.isFree,
     required this.contentOssUrls,
     this.contentKeyBase64,
+    this.isEncrypted = false,
   });
 
   final String id;
@@ -19,8 +20,11 @@ class ChapterMeta {
   /// 至少一個 OSS JSON 地址；付費章解密前需 [contentKeyBase64]。
   final List<String> contentOssUrls;
 
-  /// 購買成功後由後端下發；免費章可為 null。
+  /// 購買成功後由後端下發；免費明文 OSS 時可為 null。
   final String? contentKeyBase64;
 
-  bool get needsDecryption => !isFree;
+  /// 與後端 `content_is_encrypted` 對齊；免費章也可能為加密 OSS 測試。
+  final bool isEncrypted;
+
+  bool get needsDecryption => isEncrypted;
 }
