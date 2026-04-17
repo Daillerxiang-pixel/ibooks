@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io' show SocketException;
 
 import 'package:http/http.dart' as http;
 
@@ -36,17 +37,42 @@ class IbooksApiClient {
   }
 
   Future<dynamic> get(String path) async {
-    final res = await _client.get(_uri(path), headers: _headers());
+    final res = await _send(() => _client.get(_uri(path), headers: _headers()));
     return _decode(res);
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    final res = await _client.post(
-      _uri(path),
-      headers: _headers(jsonBody: true),
-      body: jsonEncode(body),
+    final res = await _send(
+      () => _client.post(
+        _uri(path),
+        headers: _headers(jsonBody: true),
+        body: jsonEncode(body),
+      ),
     );
     return _decode(res);
+  }
+
+  /// 將 DNS/斷網等轉為可讀提示（errno 7 / Failed host lookup = 本機未解析域名，非後端 HTTP 錯）
+  Future<http.Response> _send(Future<http.Response> Function() fn) async {
+    try {
+      return await fn();
+    } on SocketException catch (e) {
+      throw ApiException(_networkUserMessage(e.message, e));
+    } on http.ClientException catch (e) {
+      throw ApiException(_networkUserMessage(e.message, e));
+    }
+  }
+
+  static String _networkUserMessage(String message, Object err) {
+    final m = message.toLowerCase();
+    final all = err.toString().toLowerCase();
+    if (m.contains('failed host lookup') ||
+        m.contains('no address associated') ||
+        all.contains('failed host lookup') ||
+        all.contains('no address associated')) {
+      return '無法解析域名（DNS），手機尚未連上 API 地址。請檢查：①網路是否可用 ②換 Wi‑Fi / 移動數據 ③系統 DNS（可試 8.8.8.8）④用瀏覽器打開 https://book.kanashortplay.com/api/books 對照。';
+    }
+    return '網路連線失敗：$message';
   }
 
   dynamic _decode(http.Response res) {
