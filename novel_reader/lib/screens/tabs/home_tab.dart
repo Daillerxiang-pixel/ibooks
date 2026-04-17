@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/app_config.dart';
 import '../../src/data/ibooks_repository.dart';
 import '../../theme/ibooks_colors.dart';
 import '../../widgets/book_covers.dart';
@@ -314,11 +315,11 @@ class _ApiHCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: book.coverUrl != null && book.coverUrl!.isNotEmpty
+                child: AppConfig.resolvePublicUrl(book.coverUrl) != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          book.coverUrl!,
+                          AppConfig.resolvePublicUrl(book.coverUrl)!,
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => const BookCover(variant: 1, borderRadius: 12),
                         ),

@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { BooksModule } from './modules/books/books.module';
@@ -35,7 +35,15 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(AuthMiddleware)
-      .exclude('auth/login', 'auth/register', 'auth/sms', 'books', 'books/(.*)')
+      // Nest 10+ path-to-regexp：勿再用 `books/(.*)`，否則排除失效，未帶 Token 時 /api/books 會 401
+      .exclude(
+        { path: 'auth/login', method: RequestMethod.POST },
+        { path: 'auth/register', method: RequestMethod.POST },
+        { path: 'auth/sms', method: RequestMethod.POST },
+        { path: 'books', method: RequestMethod.GET },
+        { path: 'books/:id', method: RequestMethod.GET },
+        { path: 'books/:id/chapters', method: RequestMethod.GET },
+      )
       .forRoutes('*');
   }
 }
