@@ -72,26 +72,72 @@ extension ReaderFontFamilyExt on ReaderFontFamily {
   String get label => this == ReaderFontFamily.sans ? '黑體' : '宋體';
 }
 
+/// 行距檔位：低 / 中 / 高
+enum LineSpacing { low, medium, high }
+
+extension LineSpacingExt on LineSpacing {
+  String get label {
+    switch (this) {
+      case LineSpacing.low:
+        return '低';
+      case LineSpacing.medium:
+        return '中';
+      case LineSpacing.high:
+        return '高';
+    }
+  }
+
+  /// 對應實際 line-height 倍數
+  double get value {
+    switch (this) {
+      case LineSpacing.low:
+        return 1.55;
+      case LineSpacing.medium:
+        return 1.85;
+      case LineSpacing.high:
+        return 2.20;
+    }
+  }
+}
+
+/// 翻頁方式
+enum PageTurnMode { scroll, slide, curl }
+
+extension PageTurnModeExt on PageTurnMode {
+  String get label {
+    switch (this) {
+      case PageTurnMode.scroll:
+        return '上下滑';
+      case PageTurnMode.slide:
+        return '左右翻';
+      case PageTurnMode.curl:
+        return '仿真翻';
+    }
+  }
+}
+
 class ReaderSettings extends ChangeNotifier {
   static const _kTheme = 'reader_theme';
   static const _kFontSize = 'reader_font_size';
-  static const _kLineHeight = 'reader_line_height';
+  static const _kLineSpacing = 'reader_line_spacing_v2';
   static const _kFontFamily = 'reader_font_family';
+  static const _kPageMode = 'reader_page_mode';
 
   static const double minFontSize = 14;
   static const double maxFontSize = 26;
-  static const double minLineHeight = 1.4;
-  static const double maxLineHeight = 2.4;
 
   ReaderTheme _theme = ReaderTheme.day;
   double _fontSize = 18;
-  double _lineHeight = 1.85;
+  LineSpacing _lineSpacing = LineSpacing.medium;
   ReaderFontFamily _family = ReaderFontFamily.sans;
+  PageTurnMode _pageMode = PageTurnMode.scroll;
 
   ReaderTheme get theme => _theme;
   double get fontSize => _fontSize;
-  double get lineHeight => _lineHeight;
+  LineSpacing get lineSpacing => _lineSpacing;
+  double get lineHeight => _lineSpacing.value;
   ReaderFontFamily get family => _family;
+  PageTurnMode get pageMode => _pageMode;
 
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
@@ -103,12 +149,25 @@ class ReaderSettings extends ChangeNotifier {
       );
     }
     _fontSize = (p.getDouble(_kFontSize) ?? _fontSize).clamp(minFontSize, maxFontSize);
-    _lineHeight = (p.getDouble(_kLineHeight) ?? _lineHeight).clamp(minLineHeight, maxLineHeight);
+    final ls = p.getString(_kLineSpacing);
+    if (ls != null) {
+      _lineSpacing = LineSpacing.values.firstWhere(
+        (e) => e.name == ls,
+        orElse: () => LineSpacing.medium,
+      );
+    }
     final fam = p.getString(_kFontFamily);
     if (fam != null) {
       _family = ReaderFontFamily.values.firstWhere(
         (e) => e.name == fam,
         orElse: () => ReaderFontFamily.sans,
+      );
+    }
+    final pm = p.getString(_kPageMode);
+    if (pm != null) {
+      _pageMode = PageTurnMode.values.firstWhere(
+        (e) => e.name == pm,
+        orElse: () => PageTurnMode.scroll,
       );
     }
     notifyListeners();
@@ -122,7 +181,6 @@ class ReaderSettings extends ChangeNotifier {
     await p.setString(_kTheme, v.name);
   }
 
-  /// 等同於日／夜模式快速切換
   Future<void> toggleDayNight() async {
     await setTheme(_theme == ReaderTheme.dark ? ReaderTheme.day : ReaderTheme.dark);
   }
@@ -136,13 +194,12 @@ class ReaderSettings extends ChangeNotifier {
     await p.setDouble(_kFontSize, c);
   }
 
-  Future<void> setLineHeight(double v) async {
-    final c = double.parse(v.clamp(minLineHeight, maxLineHeight).toStringAsFixed(2));
-    if (c == _lineHeight) return;
-    _lineHeight = c;
+  Future<void> setLineSpacing(LineSpacing v) async {
+    if (_lineSpacing == v) return;
+    _lineSpacing = v;
     notifyListeners();
     final p = await SharedPreferences.getInstance();
-    await p.setDouble(_kLineHeight, c);
+    await p.setString(_kLineSpacing, v.name);
   }
 
   Future<void> setFamily(ReaderFontFamily v) async {
@@ -151,5 +208,13 @@ class ReaderSettings extends ChangeNotifier {
     notifyListeners();
     final p = await SharedPreferences.getInstance();
     await p.setString(_kFontFamily, v.name);
+  }
+
+  Future<void> setPageMode(PageTurnMode v) async {
+    if (_pageMode == v) return;
+    _pageMode = v;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kPageMode, v.name);
   }
 }

@@ -12,16 +12,19 @@ import '../src/data/chapter_body_inline.dart';
 import '../src/data/chapter_content_repository.dart';
 import '../src/data/ibooks_repository.dart';
 import '../src/data/reader_settings.dart';
+import '../src/data/shelf_controller.dart';
 import '../src/domain/chapter_body.dart';
 import '../src/domain/chapter_meta.dart';
+import '../src/reader/paginator.dart';
 import '../theme/app_layout.dart';
 import '../widgets/reader_settings_sheet.dart';
 
 /// 沉浸式閱讀器：
-/// - 預設 **隱藏所有控件**（頂部/底部欄）；
-/// - 點擊正文 **中間 1/3 區** 顯示/隱藏控件；
-/// - 點擊左 1/3 翻上一頁（一個視窗向上滾動），右 1/3 翻下一頁；
-/// - 完全持久化 [ReaderSettings]：字號、行距、主題（含夜間）、字體。
+/// - 預設 **隱藏所有控件**；點擊正文中央 → 切換顯示
+/// - 頂部：返回 / 標題 / 加入書架
+/// - 底部：目錄 / 日夜 / 閱讀設定
+/// - 翻頁三種：上下滑、左右翻、仿真翻
+/// - 上下滑模式：到頂/底再次拉一段 → 自動切上/下章
 class ReaderScreen extends StatefulWidget {
   const ReaderScreen({super.key, required this.chapterId, required this.bookId});
 
@@ -36,10 +39,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
   ChapterBody? _body;
   String? _error;
   bool _loading = true;
+  bool _switching = false;
   List<ChapterListItem>? _toc;
   bool _chromeVisible = false;
   final _contentRepo = ChapterContentRepository();
-  final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -53,12 +56,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
     if (oldWidget.chapterId != widget.chapterId || oldWidget.bookId != widget.bookId) {
       _load();
     }
-  }
-
-  @override
-  void dispose() {
-    _scrollCtrl.dispose();
-    super.dispose();
   }
 
   Future<void> _load() async {
@@ -91,9 +88,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
       setState(() {
         _body = body;
         _loading = false;
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollCtrl.hasClients) _scrollCtrl.jumpTo(0);
       });
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -129,16 +123,45 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _goNeighbor(int delta) async {
+    if (_switching) return;
+    _switching = true;
     await _ensureToc();
     final toc = _toc;
-    if (toc == null || toc.isEmpty) return;
+    if (toc == null || toc.isEmpty) {
+      _switching = false;
+      return;
+    }
     final i = toc.indexWhere((c) => c.id == widget.chapterId);
-    if (i < 0) return;
+    if (i < 0) {
+      _switching = false;
+      return;
+    }
     final j = i + delta;
-    if (j < 0 || j >= toc.length) return;
+    if (j < 0) {
+      _toast('已是第一章');
+      _switching = false;
+      return;
+    }
+    if (j >= toc.length) {
+      _toast('已是最後一章');
+      _switching = false;
+      return;
+    }
     final next = toc[j];
-    if (!mounted) return;
+    if (!mounted) {
+      _switching = false;
+      return;
+    }
+    HapticFeedback.lightImpact();
     context.go('/reader/${next.id}?bookId=${widget.bookId}');
+    _switching = false;
+  }
+
+  void _toast(String s) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s), duration: const Duration(seconds: 1)),
+    );
   }
 
   void _openToc(BuildContext context) {
@@ -154,27 +177,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
-  void _onTapContent(TapUpDetails d, double width, double height) {
+  void _toggleChromeOnTap(TapUpDetails d, double width, double height) {
     final dx = d.localPosition.dx;
     final dy = d.localPosition.dy;
-    // 中間 60% 寬 + 中間 50% 高 -> 切換控件顯示
     final inMidX = dx > width * 0.2 && dx < width * 0.8;
     final inMidY = dy > height * 0.25 && dy < height * 0.75;
     if (inMidX && inMidY) {
       HapticFeedback.selectionClick();
       setState(() => _chromeVisible = !_chromeVisible);
-      return;
-    }
-    // 隱藏控件時左右點擊：上下翻一屏
-    if (!_chromeVisible && _scrollCtrl.hasClients) {
-      final delta = height * 0.85;
-      final target = _scrollCtrl.offset + (dx < width * 0.5 ? -delta : delta);
-      final clamped = target.clamp(0.0, _scrollCtrl.position.maxScrollExtent);
-      _scrollCtrl.animateTo(
-        clamped,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
-      );
     }
   }
 
@@ -197,7 +207,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
       backgroundColor: theme.bg,
       body: Stack(
         children: [
-          // 正文層
           Positioned.fill(
             child: SafeArea(
               child: LayoutBuilder(
@@ -211,7 +220,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       constraints: BoxConstraints(maxWidth: maxW),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTapUp: (d) => _onTapContent(d, c.maxWidth, c.maxHeight),
+                        onTapUp: (d) => _toggleChromeOnTap(d, c.maxWidth, c.maxHeight),
                         child: _loading
                             ? const Center(child: CircularProgressIndicator())
                             : _error != null
@@ -228,14 +237,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
                                       ),
                                     ),
                                   )
-                                : _ChapterContent(
-                                    title: title,
-                                    body: _body!,
+                                : _ReaderBody(
+                                    key: ValueKey('${widget.chapterId}-${settings.pageMode.name}-${settings.fontSize.toInt()}-${settings.lineSpacing.name}-${settings.family.name}'),
+                                    chapter: _body!,
+                                    settings: settings,
                                     baseStyle: baseTextStyle,
-                                    fg: fg,
-                                    scrollCtrl: _scrollCtrl,
-                                    topPad: 56,
-                                    bottomPad: 64,
+                                    onPrev: () => _goNeighbor(-1),
+                                    onNext: () => _goNeighbor(1),
                                   ),
                       ),
                     ),
@@ -244,8 +252,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
             ),
           ),
-
-          // 頂部控件條
+          // 頂部：返回 / 標題 / 加入書架
           AnimatedSlide(
             offset: Offset(0, _chromeVisible ? 0 : -1),
             duration: const Duration(milliseconds: 220),
@@ -254,7 +261,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
               duration: const Duration(milliseconds: 180),
               child: Material(
                 color: theme.chromeBg,
-                elevation: 0,
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
@@ -275,11 +281,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                             style: GoogleFonts.notoSansTc(color: fg, fontSize: 14.5, fontWeight: FontWeight.w600),
                           ),
                         ),
-                        IconButton(
-                          tooltip: '目錄',
-                          icon: Icon(Icons.menu_book_outlined, color: fg),
-                          onPressed: () => _openToc(context),
-                        ),
+                        _ShelfToggleButton(bookId: widget.bookId, fg: fg),
                       ],
                     ),
                   ),
@@ -287,8 +289,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
             ),
           ),
-
-          // 底部控件條
+          // 底部：目錄 / 日夜 / 閱讀設定
           Align(
             alignment: Alignment.bottomCenter,
             child: AnimatedSlide(
@@ -307,13 +308,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _BottomBtn(
-                            icon: Icons.skip_previous,
-                            label: '上一章',
+                            icon: Icons.menu_book_outlined,
+                            label: '目錄',
                             fg: fg,
-                            onTap: _loading ? null : () => _goNeighbor(-1),
+                            onTap: () => _openToc(context),
                           ),
                           _BottomBtn(
-                            icon: settings.theme == ReaderTheme.dark ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
+                            icon: settings.theme == ReaderTheme.dark
+                                ? Icons.wb_sunny_outlined
+                                : Icons.nights_stay_outlined,
                             label: settings.theme == ReaderTheme.dark ? '日間' : '夜間',
                             fg: fg,
                             onTap: () => settings.toggleDayNight(),
@@ -323,12 +326,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
                             label: '閱讀設定',
                             fg: fg,
                             onTap: () => ReaderSettingsSheet.show(context),
-                          ),
-                          _BottomBtn(
-                            icon: Icons.skip_next,
-                            label: '下一章',
-                            fg: fg,
-                            onTap: _loading ? null : () => _goNeighbor(1),
                           ),
                         ],
                       ),
@@ -344,60 +341,395 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 }
 
-class _ChapterContent extends StatelessWidget {
-  const _ChapterContent({
-    required this.title,
-    required this.body,
+// ---------------- 正文渲染（依翻頁方式分發） ----------------
+
+class _ReaderBody extends StatelessWidget {
+  const _ReaderBody({
+    super.key,
+    required this.chapter,
+    required this.settings,
     required this.baseStyle,
-    required this.fg,
-    required this.scrollCtrl,
-    required this.topPad,
-    required this.bottomPad,
+    required this.onPrev,
+    required this.onNext,
   });
 
-  final String title;
-  final ChapterBody body;
+  final ChapterBody chapter;
+  final ReaderSettings settings;
   final TextStyle baseStyle;
-  final Color fg;
-  final ScrollController scrollCtrl;
-  final double topPad;
-  final double bottomPad;
+  final Future<void> Function() onPrev;
+  final Future<void> Function() onNext;
 
   @override
   Widget build(BuildContext context) {
-    final paragraphSpacing = baseStyle.fontSize! * 0.85;
+    switch (settings.pageMode) {
+      case PageTurnMode.scroll:
+        return _ScrollReader(
+          chapter: chapter,
+          baseStyle: baseStyle,
+          onPrev: onPrev,
+          onNext: onNext,
+        );
+      case PageTurnMode.slide:
+        return _PageReader(
+          chapter: chapter,
+          baseStyle: baseStyle,
+          onPrev: onPrev,
+          onNext: onNext,
+          curl: false,
+        );
+      case PageTurnMode.curl:
+        return _PageReader(
+          chapter: chapter,
+          baseStyle: baseStyle,
+          onPrev: onPrev,
+          onNext: onNext,
+          curl: true,
+        );
+    }
+  }
+}
+
+// ---------------- 模式 1：上下滑 + 邊緣再拉換章 ----------------
+
+class _ScrollReader extends StatefulWidget {
+  const _ScrollReader({
+    required this.chapter,
+    required this.baseStyle,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final ChapterBody chapter;
+  final TextStyle baseStyle;
+  final Future<void> Function() onPrev;
+  final Future<void> Function() onNext;
+
+  @override
+  State<_ScrollReader> createState() => _ScrollReaderState();
+}
+
+class _ScrollReaderState extends State<_ScrollReader> {
+  final _ctrl = ScrollController();
+  double _overscroll = 0;
+  bool _fired = false;
+  static const _threshold = 80.0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  bool _onNotif(ScrollNotification n) {
+    if (n is OverscrollNotification) {
+      _overscroll += n.overscroll;
+      if (!_fired && _overscroll.abs() >= _threshold) {
+        _fired = true;
+        if (_overscroll < 0) {
+          widget.onPrev();
+        } else {
+          widget.onNext();
+        }
+      }
+    } else if (n is ScrollEndNotification) {
+      _overscroll = 0;
+      _fired = false;
+    } else if (n is ScrollStartNotification) {
+      _overscroll = 0;
+      _fired = false;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paragraphSpacing = widget.baseStyle.fontSize! * 0.85;
     final titleStyle = GoogleFonts.notoSerifTc(
-      fontSize: baseStyle.fontSize! + 4,
+      fontSize: widget.baseStyle.fontSize! + 4,
       fontWeight: FontWeight.w700,
       height: 1.4,
-      color: fg,
+      color: widget.baseStyle.color,
     );
 
-    return ListView(
-      controller: scrollCtrl,
-      physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(20, topPad, 20, bottomPad),
-      children: [
-        if (title.isNotEmpty) ...[
-          Text(title, style: titleStyle),
-          SizedBox(height: paragraphSpacing * 1.6),
-        ],
-        for (final p in body.paragraphs) ...[
-          Text(
-            // **首行縮進兩個全角空格**（中文閱讀器常用做法）
-            '\u3000\u3000${p.trim()}',
-            style: baseStyle,
-            textAlign: TextAlign.justify,
-            strutStyle: StrutStyle(
-              fontSize: baseStyle.fontSize,
-              height: baseStyle.height,
-              forceStrutHeight: true,
+    return NotificationListener<ScrollNotification>(
+      onNotification: _onNotif,
+      child: ListView(
+        controller: _ctrl,
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(20, 56, 20, 64),
+        children: [
+          if (widget.chapter.title.isNotEmpty) ...[
+            Text(widget.chapter.title, style: titleStyle),
+            SizedBox(height: paragraphSpacing * 1.6),
+          ],
+          for (final p in widget.chapter.paragraphs) ...[
+            Text(
+              '\u3000\u3000${p.trim()}',
+              style: widget.baseStyle,
+              textAlign: TextAlign.justify,
+              strutStyle: StrutStyle(
+                fontSize: widget.baseStyle.fontSize,
+                height: widget.baseStyle.height,
+                forceStrutHeight: true,
+              ),
+            ),
+            SizedBox(height: paragraphSpacing),
+          ],
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Center(
+              child: Text(
+                '— 上滑進入下一章 —',
+                style: GoogleFonts.notoSansTc(
+                  fontSize: 12,
+                  color: widget.baseStyle.color?.withOpacity(0.45),
+                ),
+              ),
             ),
           ),
-          SizedBox(height: paragraphSpacing),
+          SizedBox(height: paragraphSpacing * 2),
         ],
-        SizedBox(height: paragraphSpacing * 2),
-      ],
+      ),
+    );
+  }
+}
+
+// ---------------- 模式 2/3：分頁 PageView + 翻頁過場（curl） ----------------
+
+class _PageReader extends StatefulWidget {
+  const _PageReader({
+    required this.chapter,
+    required this.baseStyle,
+    required this.onPrev,
+    required this.onNext,
+    required this.curl,
+  });
+
+  final ChapterBody chapter;
+  final TextStyle baseStyle;
+  final Future<void> Function() onPrev;
+  final Future<void> Function() onNext;
+  final bool curl;
+
+  @override
+  State<_PageReader> createState() => _PageReaderState();
+}
+
+class _PageReaderState extends State<_PageReader> {
+  late final PageController _pc = PageController();
+
+  @override
+  void dispose() {
+    _pc.dispose();
+    super.dispose();
+  }
+
+  void _maybeJumpChapter(int currentIndex, int total) {
+    if (currentIndex == 0) {
+      // 已在第一頁；若用戶再次往左拉，PageView 會嘗試 underflow → 由 onNotification 觸發
+    }
+    if (currentIndex == total - 1) {
+      // 同上：最後一頁
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paragraphSpacing = widget.baseStyle.fontSize! * 0.85;
+    final fullText = _composeFull(widget.chapter);
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        final paginator = ChapterPaginator(
+          fullText: fullText,
+          style: widget.baseStyle,
+          size: Size(c.maxWidth - 40, c.maxHeight - 80),
+          strutStyle: StrutStyle(
+            fontSize: widget.baseStyle.fontSize,
+            height: widget.baseStyle.height,
+            forceStrutHeight: true,
+          ),
+        );
+        final pages = paginator.paginate();
+        return NotificationListener<OverscrollNotification>(
+          onNotification: (n) {
+            if (n.overscroll < -1 && _pc.position.pixels <= 0) {
+              widget.onPrev();
+            } else if (n.overscroll > 1 && _pc.position.pixels >= _pc.position.maxScrollExtent) {
+              widget.onNext();
+            }
+            return false;
+          },
+          child: PageView.builder(
+            controller: _pc,
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: pages.length,
+            onPageChanged: (i) => _maybeJumpChapter(i, pages.length),
+            itemBuilder: (context, index) {
+              final page = _PageContent(
+                text: pages[index],
+                index: index,
+                total: pages.length,
+                baseStyle: widget.baseStyle,
+                paragraphSpacing: paragraphSpacing,
+              );
+              if (!widget.curl) return page;
+              return AnimatedBuilder(
+                animation: _pc,
+                builder: (context, child) {
+                  double v = 0;
+                  if (_pc.position.haveDimensions) {
+                    v = (_pc.page ?? _pc.initialPage.toDouble()) - index;
+                  }
+                  v = v.clamp(-1.0, 1.0);
+                  // 翻頁透視（簡化的「仿真翻頁」感）
+                  final m = Matrix4.identity()
+                    ..setEntry(3, 2, 0.0015)
+                    ..rotateY(v * (math.pi / 2.4));
+                  return Transform(
+                    alignment: v < 0 ? Alignment.centerRight : Alignment.centerLeft,
+                    transform: m,
+                    child: child,
+                  );
+                },
+                child: page,
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  String _composeFull(ChapterBody body) {
+    final sb = StringBuffer();
+    if (body.title.isNotEmpty) {
+      sb.writeln(body.title);
+      sb.writeln();
+    }
+    for (final p in body.paragraphs) {
+      sb.write('\u3000\u3000${p.trim()}');
+      sb.writeln();
+      sb.writeln();
+    }
+    return sb.toString();
+  }
+}
+
+class _PageContent extends StatelessWidget {
+  const _PageContent({
+    required this.text,
+    required this.index,
+    required this.total,
+    required this.baseStyle,
+    required this.paragraphSpacing,
+  });
+
+  final String text;
+  final int index;
+  final int total;
+  final TextStyle baseStyle;
+  final double paragraphSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Text(
+              text,
+              style: baseStyle,
+              textAlign: TextAlign.justify,
+              strutStyle: StrutStyle(
+                fontSize: baseStyle.fontSize,
+                height: baseStyle.height,
+                forceStrutHeight: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${index + 1} / $total',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSansTc(
+              fontSize: 11,
+              color: baseStyle.color?.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------- 共用 Widgets ----------------
+
+class _ShelfToggleButton extends StatelessWidget {
+  const _ShelfToggleButton({required this.bookId, required this.fg});
+  final int bookId;
+  final Color fg;
+
+  Future<void> _add(BuildContext context) async {
+    final repo = context.read<IbooksRepository>();
+    final shelf = context.read<ShelfController>();
+    try {
+      final book = await repo.bookDetail(bookId);
+      if (book != null) {
+        await shelf.addFromBook(book);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已加入書架'), duration: Duration(seconds: 1)),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加入失敗：$e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _remove(BuildContext context) async {
+    await context.read<ShelfController>().remove(bookId);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已從書架移除'), duration: Duration(seconds: 1)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shelf = context.watch<ShelfController>();
+    final inShelf = shelf.contains(bookId);
+    return Tooltip(
+      message: inShelf ? '已在書架（長按移除）' : '加入書架',
+      child: InkResponse(
+        radius: 22,
+        onTap: () {
+          if (inShelf) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('已在書架，長按可移除'), duration: Duration(seconds: 1)),
+            );
+          } else {
+            _add(context);
+          }
+        },
+        onLongPress: inShelf ? () => _remove(context) : null,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            inShelf ? Icons.bookmark : Icons.bookmark_border,
+            color: fg,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -420,7 +752,7 @@ class _BottomBtn extends StatelessWidget {
     return InkResponse(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

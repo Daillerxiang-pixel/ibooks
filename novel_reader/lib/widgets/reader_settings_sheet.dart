@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../src/data/reader_settings.dart';
 
-/// 閱讀器設置面板（底部彈出），參考主流閱讀器：字號、行距、主題、字體
+/// 閱讀器設置面板（底部彈出）：字號、行距檔位、背景、字體、翻頁方式
 class ReaderSettingsSheet extends StatelessWidget {
   const ReaderSettingsSheet({super.key});
 
@@ -56,11 +56,7 @@ class ReaderSettingsSheet extends StatelessWidget {
             label('字號  ${s.fontSize.toStringAsFixed(0)}'),
             Row(
               children: [
-                _StepBtn(
-                  icon: 'A−',
-                  fg: fg,
-                  onTap: () => s.setFontSize(s.fontSize - 1),
-                ),
+                _StepBtn(icon: 'A−', fg: fg, onTap: () => s.setFontSize(s.fontSize - 1)),
                 Expanded(
                   child: Slider(
                     value: s.fontSize,
@@ -70,27 +66,32 @@ class ReaderSettingsSheet extends StatelessWidget {
                     onChanged: s.setFontSize,
                   ),
                 ),
-                _StepBtn(
-                  icon: 'A+',
-                  fg: fg,
-                  onTap: () => s.setFontSize(s.fontSize + 1),
-                ),
+                _StepBtn(icon: 'A+', fg: fg, onTap: () => s.setFontSize(s.fontSize + 1)),
               ],
             ),
             const SizedBox(height: 8),
 
-            // 行距
-            label('行距  ${s.lineHeight.toStringAsFixed(2)}'),
-            Slider(
-              value: s.lineHeight,
-              min: ReaderSettings.minLineHeight,
-              max: ReaderSettings.maxLineHeight,
-              divisions: ((ReaderSettings.maxLineHeight - ReaderSettings.minLineHeight) * 10).round(),
-              onChanged: s.setLineHeight,
+            // 行距：低/中/高
+            label('行距'),
+            Row(
+              children: [
+                for (final ls in LineSpacing.values) ...[
+                  Expanded(
+                    child: _Chip(
+                      label: ls.label,
+                      selected: s.lineSpacing == ls,
+                      onTap: () => s.setLineSpacing(ls),
+                      fg: fg,
+                      subtle: subtle,
+                    ),
+                  ),
+                  if (ls != LineSpacing.values.last) const SizedBox(width: 10),
+                ],
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 14),
 
-            // 主題
+            // 背景
             label('背景'),
             Row(
               children: [
@@ -123,6 +124,26 @@ class ReaderSettingsSheet extends StatelessWidget {
                     ),
                   ),
                   if (f != ReaderFontFamily.values.last) const SizedBox(width: 10),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // 翻頁方式
+            label('翻頁'),
+            Row(
+              children: [
+                for (final m in PageTurnMode.values) ...[
+                  Expanded(
+                    child: _Chip(
+                      label: m.label,
+                      selected: s.pageMode == m,
+                      onTap: () => s.setPageMode(m),
+                      fg: fg,
+                      subtle: subtle,
+                    ),
+                  ),
+                  if (m != PageTurnMode.values.last) const SizedBox(width: 10),
                 ],
               ],
             ),
@@ -217,6 +238,41 @@ class _FontChip extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Text(family.label, style: ts),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.fg,
+    required this.subtle,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final Color fg;
+  final Color subtle;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? const Color(0xFF8B3A2E) : subtle, width: selected ? 2 : 1),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.notoSansTc(fontSize: 13, color: fg, fontWeight: selected ? FontWeight.w700 : FontWeight.w500),
+        ),
       ),
     );
   }
