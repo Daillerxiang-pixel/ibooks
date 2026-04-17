@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 把整章正文按給定樣式 + 頁面尺寸，切成若干「整頁」字符串。
-/// 用 [TextPainter] 二分定位每頁能容納的最後一個字符位置。
+/// 將整章正文按給定樣式 + 頁面尺寸切成若干「整頁」字符串。
+/// 採用二分法：每頁找到能完全容納在 [size] 內的最長前綴，再嘗試在「。！？」等
+/// 自然斷點上回退，避免句子被切到下一頁開頭。
 class ChapterPaginator {
   ChapterPaginator({
     required this.fullText,
@@ -12,6 +13,8 @@ class ChapterPaginator {
 
   final String fullText;
   final TextStyle style;
+
+  /// 一頁可顯示文本的可用區域（已扣除外部 padding）
   final Size size;
   final StrutStyle? strutStyle;
 
@@ -20,58 +23,61 @@ class ChapterPaginator {
       return [fullText];
     }
     final pages = <String>[];
-    String remaining = fullText;
+    String remaining = _trimLeadingBlank(fullText);
     while (remaining.isNotEmpty) {
-      final tp = _layout(remaining);
-      if (tp.size.height <= size.height + 0.5) {
+      // 整段已能放下：作為最後一頁結束
+      if (_heightOf(remaining) <= size.height + 0.5) {
         pages.add(remaining);
         break;
       }
-      // 估計最後一個可顯示字符的位置
-      final pos = tp.getPositionForOffset(Offset(size.width - 1, size.height));
-      int end = pos.offset.clamp(1, remaining.length);
-      // 線性回退，確保切片真的能放下，避免單行溢出
-      end = _shrinkToFit(remaining, end);
-      // 若處於英文/數字/標點末尾，盡量回退到一個自然斷點
-      end = _preferBreak(remaining, end);
-      pages.add(remaining.substring(0, end));
-      remaining = remaining.substring(end);
-      // 開頭如果是換行/空白，去掉以避免「上頁尾的空行」帶到下一頁頂部
-      remaining = _trimLeadingBlank(remaining);
-      if (pages.length > 5000) break; // 防護
+      // 二分搜索最長能放下的前綴長度
+      int lo = 1;
+      int hi = remaining.length;
+      int best = 1;
+      while (lo <= hi) {
+        final mid = (lo + hi) >> 1;
+        final h = _heightOf(remaining.substring(0, mid));
+        if (h <= size.height + 0.5) {
+          best = mid;
+          lo = mid + 1;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      // 在標點處回退（最多 60 字），讓段落更自然
+      best = _preferBreak(remaining, best);
+      pages.add(remaining.substring(0, best));
+      remaining = _trimLeadingBlank(remaining.substring(best));
+      if (pages.length > 5000) break;
     }
     if (pages.isEmpty) pages.add('');
     return pages;
   }
 
-  TextPainter _layout(String text) {
+  double _heightOf(String text) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
       maxLines: null,
       strutStyle: strutStyle,
     )..layout(maxWidth: size.width);
-    return tp;
-  }
-
-  int _shrinkToFit(String text, int end) {
-    int e = end;
-    int guard = 0;
-    while (e > 1 && guard < 200) {
-      final tp = _layout(text.substring(0, e));
-      if (tp.size.height <= size.height + 0.5) return e;
-      e -= (e ~/ 32).clamp(1, 8);
-      guard++;
-    }
-    return e.clamp(1, text.length);
+    final h = tp.size.height;
+    tp.dispose();
+    return h;
   }
 
   int _preferBreak(String text, int end) {
-    final maxBack = 40;
+    const maxBack = 60;
     final lower = (end - maxBack).clamp(1, end);
     for (int i = end - 1; i >= lower; i--) {
       final ch = text[i];
-      if (ch == '\n' || ch == '。' || ch == '！' || ch == '？' || ch == '」' || ch == '”') {
+      if (ch == '\n' ||
+          ch == '。' ||
+          ch == '！' ||
+          ch == '？' ||
+          ch == '」' ||
+          ch == '”' ||
+          ch == '；') {
         return i + 1;
       }
     }

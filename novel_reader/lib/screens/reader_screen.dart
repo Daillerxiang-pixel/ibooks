@@ -495,6 +495,12 @@ class _ScrollReaderState extends State<_ScrollReader> {
 }
 
 // ---------------- 模式 2/3：分頁 PageView + 翻頁過場（curl） ----------------
+//
+// 在「正文頁」前後插入 **哨兵頁**（上一章 / 下一章）；用戶滑到哨兵 → 切章。
+// 這比依賴 OverscrollNotification 更穩定，左右翻 / 仿真翻一致。
+
+const double _kPagePadH = 18;
+const double _kPagePadV = 36;
 
 class _PageReader extends StatefulWidget {
   const _PageReader({
@@ -516,7 +522,8 @@ class _PageReader extends StatefulWidget {
 }
 
 class _PageReaderState extends State<_PageReader> {
-  late final PageController _pc = PageController();
+  late final PageController _pc = PageController(initialPage: 1);
+  bool _switchInFlight = false;
 
   @override
   void dispose() {
@@ -524,82 +531,16 @@ class _PageReaderState extends State<_PageReader> {
     super.dispose();
   }
 
-  void _maybeJumpChapter(int currentIndex, int total) {
-    if (currentIndex == 0) {
-      // 已在第一頁；若用戶再次往左拉，PageView 會嘗試 underflow → 由 onNotification 觸發
+  void _onPageChanged(int index, int contentPages) {
+    if (_switchInFlight) return;
+    // index 0 = 上一章哨兵；index = contentPages + 1 = 下一章哨兵
+    if (index == 0) {
+      _switchInFlight = true;
+      widget.onPrev();
+    } else if (index == contentPages + 1) {
+      _switchInFlight = true;
+      widget.onNext();
     }
-    if (currentIndex == total - 1) {
-      // 同上：最後一頁
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final paragraphSpacing = widget.baseStyle.fontSize! * 0.85;
-    final fullText = _composeFull(widget.chapter);
-
-    return LayoutBuilder(
-      builder: (context, c) {
-        final paginator = ChapterPaginator(
-          fullText: fullText,
-          style: widget.baseStyle,
-          size: Size(c.maxWidth - 40, c.maxHeight - 80),
-          strutStyle: StrutStyle(
-            fontSize: widget.baseStyle.fontSize,
-            height: widget.baseStyle.height,
-            forceStrutHeight: true,
-          ),
-        );
-        final pages = paginator.paginate();
-        return NotificationListener<OverscrollNotification>(
-          onNotification: (n) {
-            if (n.overscroll < -1 && _pc.position.pixels <= 0) {
-              widget.onPrev();
-            } else if (n.overscroll > 1 && _pc.position.pixels >= _pc.position.maxScrollExtent) {
-              widget.onNext();
-            }
-            return false;
-          },
-          child: PageView.builder(
-            controller: _pc,
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: pages.length,
-            onPageChanged: (i) => _maybeJumpChapter(i, pages.length),
-            itemBuilder: (context, index) {
-              final page = _PageContent(
-                text: pages[index],
-                index: index,
-                total: pages.length,
-                baseStyle: widget.baseStyle,
-                paragraphSpacing: paragraphSpacing,
-              );
-              if (!widget.curl) return page;
-              return AnimatedBuilder(
-                animation: _pc,
-                builder: (context, child) {
-                  double v = 0;
-                  if (_pc.position.haveDimensions) {
-                    v = (_pc.page ?? _pc.initialPage.toDouble()) - index;
-                  }
-                  v = v.clamp(-1.0, 1.0);
-                  // 翻頁透視（簡化的「仿真翻頁」感）
-                  final m = Matrix4.identity()
-                    ..setEntry(3, 2, 0.0015)
-                    ..rotateY(v * (math.pi / 2.4));
-                  return Transform(
-                    alignment: v < 0 ? Alignment.centerRight : Alignment.centerLeft,
-                    transform: m,
-                    child: child,
-                  );
-                },
-                child: page,
-              );
-            },
-          ),
-        );
-      },
-    );
   }
 
   String _composeFull(ChapterBody body) {
@@ -615,6 +556,81 @@ class _PageReaderState extends State<_PageReader> {
     }
     return sb.toString();
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final fullText = _composeFull(widget.chapter);
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        // 真實可繪文本區（嚴格扣除四周 padding）
+        final pageW = c.maxWidth - _kPagePadH * 2;
+        final pageH = c.maxHeight - _kPagePadV * 2;
+        final paginator = ChapterPaginator(
+          fullText: fullText,
+          style: widget.baseStyle,
+          size: Size(pageW, pageH),
+          strutStyle: StrutStyle(
+            fontSize: widget.baseStyle.fontSize,
+            height: widget.baseStyle.height,
+            forceStrutHeight: true,
+          ),
+        );
+        final contentPages = paginator.paginate();
+        // 哨兵頁包裹
+        final total = contentPages.length + 2;
+
+        return PageView.builder(
+          controller: _pc,
+          scrollDirection: Axis.horizontal,
+          physics: const ClampingScrollPhysics(),
+          itemCount: total,
+          onPageChanged: (i) => _onPageChanged(i, contentPages.length),
+          itemBuilder: (context, index) {
+            Widget page;
+            if (index == 0) {
+              page = _SentinelPage(
+                text: '← 滑到首頁\n再次左滑：上一章',
+                color: widget.baseStyle.color!,
+              );
+            } else if (index == total - 1) {
+              page = _SentinelPage(
+                text: '滑到末頁 →\n再次右滑：下一章',
+                color: widget.baseStyle.color!,
+              );
+            } else {
+              page = _PageContent(
+                text: contentPages[index - 1],
+                index: index,
+                total: contentPages.length,
+                baseStyle: widget.baseStyle,
+              );
+            }
+            if (!widget.curl) return page;
+            return AnimatedBuilder(
+              animation: _pc,
+              builder: (context, child) {
+                double v = 0;
+                if (_pc.position.haveDimensions) {
+                  v = (_pc.page ?? _pc.initialPage.toDouble()) - index;
+                }
+                v = v.clamp(-1.0, 1.0);
+                final m = Matrix4.identity()
+                  ..setEntry(3, 2, 0.0015)
+                  ..rotateY(v * (math.pi / 2.4));
+                return Transform(
+                  alignment: v < 0 ? Alignment.centerRight : Alignment.centerLeft,
+                  transform: m,
+                  child: child,
+                );
+              },
+              child: page,
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class _PageContent extends StatelessWidget {
@@ -623,44 +639,72 @@ class _PageContent extends StatelessWidget {
     required this.index,
     required this.total,
     required this.baseStyle,
-    required this.paragraphSpacing,
   });
 
   final String text;
   final int index;
   final int total;
   final TextStyle baseStyle;
-  final double paragraphSpacing;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Text(
-              text,
-              style: baseStyle,
-              textAlign: TextAlign.justify,
-              strutStyle: StrutStyle(
-                fontSize: baseStyle.fontSize,
-                height: baseStyle.height,
-                forceStrutHeight: true,
+    // 為保證文本鋪滿可用區，使用 OverflowBox 將 Text 對齊到頂部，
+    // 同時把翻頁進度寫到右下角的小角標，不再佔用單獨一行。
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(_kPagePadH, _kPagePadV, _kPagePadH, _kPagePadV),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Text(
+                text,
+                style: baseStyle,
+                textAlign: TextAlign.justify,
+                strutStyle: StrutStyle(
+                  fontSize: baseStyle.fontSize,
+                  height: baseStyle.height,
+                  forceStrutHeight: true,
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${index + 1} / $total',
-            textAlign: TextAlign.center,
+        ),
+        Positioned(
+          right: _kPagePadH,
+          bottom: 8,
+          child: Text(
+            '$index / ${total + 1}',
             style: GoogleFonts.notoSansTc(
-              fontSize: 11,
-              color: baseStyle.color?.withOpacity(0.5),
+              fontSize: 10.5,
+              color: baseStyle.color?.withOpacity(0.45),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SentinelPage extends StatelessWidget {
+  const _SentinelPage({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.notoSansTc(
+            color: color.withOpacity(0.55),
+            fontSize: 14,
+            height: 1.8,
+          ),
+        ),
       ),
     );
   }
