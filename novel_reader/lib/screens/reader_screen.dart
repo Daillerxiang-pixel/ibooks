@@ -808,9 +808,9 @@ class _ScrollReaderState extends State<_ScrollReader> {
   Widget build(BuildContext context) {
     final paragraphSpacing = widget.baseStyle.fontSize! * 0.85;
     final titleStyle = GoogleFonts.notoSerifTc(
-      fontSize: widget.baseStyle.fontSize! + 4,
-      fontWeight: FontWeight.w700,
-      height: 1.4,
+      fontSize: widget.baseStyle.fontSize! + 6,
+      fontWeight: FontWeight.w800,
+      height: 1.5,
       color: widget.baseStyle.color,
     );
 
@@ -935,6 +935,9 @@ class _PageReaderState extends State<_PageReader> {
   bool _paginating = false;
   Size? _lastSize;
 
+  /// 當前正文頁（不含前後哨兵頁）；用於頂/底固定狀態欄顯示頁碼
+  int _currentContentPage = 0;
+
   // 防止哨兵頁連續觸發章節切換
   bool _switchInFlight = false;
 
@@ -975,11 +978,9 @@ class _PageReaderState extends State<_PageReader> {
     _paginating = true;
     _lastSize = size;
 
-    final fullText = _composeFull(widget.chapter);
     final pageW = size.width - widget.padH * 2;
-
-    // 文本可用區高度（由 ChapterLayout 內部按實測行高換算 contentH，避免半字截斷）
-    final availH = size.height - _kPagePadTop - _kStatusBarH;
+    // 文本可用區高度（已扣除頂/底狀態欄與間隔；它們現在固定在 PageView 之外）
+    final availH = size.height - _kPageHeaderH - _kPageHeaderGap - _kPageFooterGap - _kStatusBarH;
 
     final strutStyle = StrutStyle(
       fontSize: widget.baseStyle.fontSize,
@@ -987,16 +988,16 @@ class _PageReaderState extends State<_PageReader> {
       forceStrutHeight: true,
     );
 
+    final textSpan = _composeFull(widget.chapter);
+
     _layout?.dispose();
     final newLayout = ChapterLayout.layout(
-      fullText: fullText,
-      style: widget.baseStyle,
+      textSpan: textSpan,
       strutStyle: strutStyle,
       pageWidth: pageW,
       availableHeight: availH,
     );
 
-    // 保持當前頁位置（哨兵頁 offset = 1）；首次分頁優先使用 initialPageIndex
     int currentContent = 0;
     if (_pc != null && _pc!.hasClients) {
       currentContent = math.max(0, (_pc!.page?.round() ?? 1) - 1);
@@ -1010,6 +1011,7 @@ class _PageReaderState extends State<_PageReader> {
 
     setState(() {
       _layout = newLayout;
+      _currentContentPage = currentContent;
       _paginating = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1017,26 +1019,38 @@ class _PageReaderState extends State<_PageReader> {
     });
   }
 
-  /// 把整章拼成一個字符串，交給 ChapterPaginator 做行級分頁。
-  /// 段落之間插入一個空行（\n\n），末尾不加多餘換行，
-  /// 確保最後一頁不帶尾部空行。
-  String _composeFull(ChapterBody body) {
-    final sb = StringBuffer();
+  /// 把整章拼成 [TextSpan]：標題加大加粗（serif），正文常規。
+  InlineSpan _composeFull(ChapterBody body) {
+    final children = <InlineSpan>[];
     if (body.title.isNotEmpty) {
-      sb.write(body.title);
-      sb.write('\n\n');
+      // 標題：基於正文 fontSize 上浮 4，宋體粗，行高略寬以視覺突出
+      final titleStyle = GoogleFonts.notoSerifTc(
+        fontSize: (widget.baseStyle.fontSize ?? 18) + 4,
+        height: 1.5,
+        fontWeight: FontWeight.w800,
+        color: widget.baseStyle.color,
+      );
+      children.add(TextSpan(text: body.title, style: titleStyle));
+      // 標題下方留兩行空白（用正文 baseStyle 的兩個 \n）
+      children.add(TextSpan(text: '\n\n', style: widget.baseStyle));
     }
     final paras = body.paragraphs.where((p) => p.trim().isNotEmpty).toList();
     for (int i = 0; i < paras.length; i++) {
-      sb.write('\u3000\u3000${paras[i].trim()}');
-      if (i < paras.length - 1) sb.write('\n\n'); // 段落間空行，末段不加
+      children.add(TextSpan(text: '\u3000\u3000${paras[i].trim()}', style: widget.baseStyle));
+      if (i < paras.length - 1) {
+        children.add(TextSpan(text: '\n\n', style: widget.baseStyle));
+      }
     }
-    return sb.toString();
+    return TextSpan(style: widget.baseStyle, children: children);
   }
 
   void _onPageChanged(int index) {
     final contentPages = _layout?.pageCount ?? 0;
     if (index > 0 && index <= contentPages) {
+      // 更新固定狀態欄裡的頁碼
+      if (_currentContentPage != index - 1) {
+        setState(() => _currentContentPage = index - 1);
+      }
       widget.onPageChanged(index - 1, contentPages);
     }
 
@@ -1052,6 +1066,8 @@ class _PageReaderState extends State<_PageReader> {
 
   @override
   Widget build(BuildContext context) {
+    final subtleColor = widget.baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
+
     return LayoutBuilder(
       builder: (context, c) {
         final size = Size(c.maxWidth, c.maxHeight);
@@ -1071,59 +1087,94 @@ class _PageReaderState extends State<_PageReader> {
 
         final total = layout.pageCount + 2; // 含兩個哨兵頁
 
-        return PageView.builder(
-          controller: _pc,
-          scrollDirection: Axis.horizontal,
-          physics: const ClampingScrollPhysics(),
-          itemCount: total,
-          onPageChanged: _onPageChanged,
-          itemBuilder: (context, index) {
-            Widget page;
-            if (index == 0) {
-              page = _SentinelPage(
-                label: '上一章',
-                subLabel: '再次左滑切換',
-                color: widget.baseStyle.color!,
-              );
-            } else if (index == total - 1) {
-              page = _SentinelPage(
-                label: '下一章',
-                subLabel: '再次右滑切換',
-                color: widget.baseStyle.color!,
-              );
-            } else {
-              page = _PageContent(
-                layout: layout,
-                pageIndex: index - 1,
-                baseStyle: widget.baseStyle,
-                padH: widget.padH,
-                bookTitle: widget.bookTitle,
-                chapterTitle: widget.chapterTitle,
-              );
-            }
-            if (!widget.curl) return page;
-            // 仿真翻頁：3D 視差旋轉
-            return AnimatedBuilder(
-              animation: _pc!,
-              builder: (context, child) {
-                double v = 0;
-                if (_pc!.position.haveDimensions) {
-                  v = (_pc!.page ?? _pc!.initialPage.toDouble()) - index;
-                }
-                v = v.clamp(-1.0, 1.0);
-                final m = Matrix4.identity()
-                  ..setEntry(3, 2, 0.0015)
-                  ..rotateY(v * (math.pi / 2.4));
-                return Transform(
-                  alignment:
-                      v < 0 ? Alignment.centerRight : Alignment.centerLeft,
-                  transform: m,
-                  child: child,
-                );
-              },
-              child: page,
-            );
-          },
+        // 把頂部「章節 · 書名」、底部「頁碼 · 時間 · 電量」**固定**在 PageView 之外
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: widget.padH),
+          child: Column(
+            children: [
+              SizedBox(
+                height: _kPageHeaderH,
+                child: _PageHeader(
+                  left: widget.chapterTitle,
+                  right: widget.bookTitle,
+                  color: subtleColor,
+                ),
+              ),
+              SizedBox(height: _kPageHeaderGap),
+              // 翻頁區（只包含正文 / 哨兵頁）
+              Expanded(
+                child: PageView.builder(
+                  controller: _pc,
+                  scrollDirection: Axis.horizontal,
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: total,
+                  onPageChanged: _onPageChanged,
+                  itemBuilder: (context, index) {
+                    Widget page;
+                    if (index == 0) {
+                      page = _SentinelPage(
+                        label: '上一章',
+                        subLabel: '再次左滑切換',
+                        color: widget.baseStyle.color!,
+                      );
+                    } else if (index == total - 1) {
+                      page = _SentinelPage(
+                        label: '下一章',
+                        subLabel: '再次右滑切換',
+                        color: widget.baseStyle.color!,
+                      );
+                    } else {
+                      page = _PageContent(
+                        layout: layout,
+                        pageIndex: index - 1,
+                      );
+                    }
+                    if (!widget.curl) return page;
+                    // 仿真翻頁：3D 視差旋轉
+                    return AnimatedBuilder(
+                      animation: _pc!,
+                      builder: (context, child) {
+                        double v = 0;
+                        if (_pc!.position.haveDimensions) {
+                          v = (_pc!.page ?? _pc!.initialPage.toDouble()) - index;
+                        }
+                        v = v.clamp(-1.0, 1.0);
+                        final m = Matrix4.identity()
+                          ..setEntry(3, 2, 0.0015)
+                          ..rotateY(v * (math.pi / 2.4));
+                        return Transform(
+                          alignment: v < 0 ? Alignment.centerRight : Alignment.centerLeft,
+                          transform: m,
+                          child: child,
+                        );
+                      },
+                      child: page,
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: _kPageFooterGap),
+              // 固定底部狀態列：左 頁碼（隨翻頁更新），右 時間 + 電量
+              SizedBox(
+                height: _kStatusBarH,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${_currentContentPage + 1} / ${layout.pageCount}',
+                        style: GoogleFonts.notoSansTc(fontSize: 10, color: subtleColor),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _TimeDisplay(color: subtleColor),
+                    const SizedBox(width: 8),
+                    _BatteryDisplay(color: subtleColor),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1138,72 +1189,29 @@ class _PageReaderState extends State<_PageReader> {
 // 「測量 vs 渲染」的差異。
 
 class _PageContent extends StatelessWidget {
-  const _PageContent({
-    required this.layout,
-    required this.pageIndex,
-    required this.baseStyle,
-    required this.padH,
-    required this.bookTitle,
-    required this.chapterTitle,
-  });
+  const _PageContent({required this.layout, required this.pageIndex});
 
   final ChapterLayout layout;
   final int pageIndex;
-  final TextStyle baseStyle;
-  final double padH;
-  final String bookTitle;
-  final String chapterTitle;
 
   @override
   Widget build(BuildContext context) {
-    final subtleColor = baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: padH),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 頂部狀態列：左 章節名，右 書名
-          SizedBox(
-            height: _kPageHeaderH,
-            child: _PageHeader(
-              left: chapterTitle,
-              right: bookTitle,
-              color: subtleColor,
-            ),
+    final pageH = layout.pageHeight(pageIndex);
+    // 外層 Container 撐滿 availableHeight，內部按本頁實際內容高度繪製，
+    // 避免「頁底漏出下一頁首行」。
+    return Container(
+      width: layout.pageWidth,
+      height: layout.availableHeight,
+      alignment: Alignment.topLeft,
+      child: ClipRect(
+        child: SizedBox(
+          width: layout.pageWidth,
+          height: pageH,
+          child: CustomPaint(
+            painter: _ChapterSlicePainter(layout: layout, pageIndex: pageIndex),
+            size: Size(layout.pageWidth, pageH),
           ),
-          SizedBox(height: _kPageHeaderGap),
-          // 整章排版的 y 區段 [pageIndex*contentH, (pageIndex+1)*contentH)
-          ClipRect(
-            child: SizedBox(
-              width: layout.pageWidth,
-              height: layout.contentH,
-              child: CustomPaint(
-                painter: _ChapterSlicePainter(layout: layout, pageIndex: pageIndex),
-                size: Size(layout.pageWidth, layout.contentH),
-              ),
-            ),
-          ),
-          SizedBox(height: _kPageFooterGap),
-          // 底部狀態列：左 頁碼，右 時間 + 電量
-          SizedBox(
-            height: _kStatusBarH,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    '${pageIndex + 1} / ${layout.pageCount}',
-                    style: GoogleFonts.notoSansTc(fontSize: 10, color: subtleColor),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                _TimeDisplay(color: subtleColor),
-                const SizedBox(width: 8),
-                _BatteryDisplay(color: subtleColor),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
