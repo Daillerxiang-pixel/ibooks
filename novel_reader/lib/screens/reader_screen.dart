@@ -262,7 +262,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
       }
       if (!mounted) return;
       HapticFeedback.lightImpact();
-      context.go('/reader/${toc[j].id}?bookId=${widget.bookId}');
+      // 切換章節用 replace 而不是 go：保留原來的返回棧，保證頂部「返回」按鈕仍能退回上一頁。
+      context.replace('/reader/${toc[j].id}?bookId=${widget.bookId}');
     } finally {
       _switching = false;
     }
@@ -500,10 +501,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
                       fg: fg,
                       currentPage: _currentPage,
                       totalPages: _totalPages,
-                      hasPrev: _hasPrev(),
-                      hasNext: _hasNext(),
-                      onPrevChapter: () => _goNeighbor(-1),
-                      onNextChapter: () => _goNeighbor(1),
                       onToc: _openToc,
                       onSettings: () => ReaderSettingsSheet.show(context),
                       onPageJump: (page) {
@@ -530,10 +527,6 @@ class _BottomChrome extends StatelessWidget {
     required this.fg,
     required this.currentPage,
     required this.totalPages,
-    required this.hasPrev,
-    required this.hasNext,
-    required this.onPrevChapter,
-    required this.onNextChapter,
     required this.onToc,
     required this.onSettings,
     required this.onPageJump,
@@ -543,10 +536,6 @@ class _BottomChrome extends StatelessWidget {
   final Color fg;
   final int currentPage;
   final int totalPages;
-  final bool hasPrev;
-  final bool hasNext;
-  final VoidCallback onPrevChapter;
-  final VoidCallback onNextChapter;
   final VoidCallback onToc;
   final VoidCallback onSettings;
   final void Function(int page) onPageJump;
@@ -632,16 +621,10 @@ class _BottomChrome extends StatelessWidget {
               ),
               const SizedBox(height: 4),
 
-              // 五按鈕列
+              // 三按鈕列：目錄 / 日夜 / 設定
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _ChromeBtn(
-                    icon: Icons.skip_previous_outlined,
-                    label: '上一章',
-                    fg: hasPrev ? fg : fg.withOpacity(0.3),
-                    onTap: hasPrev ? onPrevChapter : null,
-                  ),
                   _ChromeBtn(
                     icon: Icons.menu_book_outlined,
                     label: '目錄',
@@ -661,12 +644,6 @@ class _BottomChrome extends StatelessWidget {
                     label: '設定',
                     fg: fg,
                     onTap: onSettings,
-                  ),
-                  _ChromeBtn(
-                    icon: Icons.skip_next_outlined,
-                    label: '下一章',
-                    fg: hasNext ? fg : fg.withOpacity(0.3),
-                    onTap: hasNext ? onNextChapter : null,
                   ),
                 ],
               ),
@@ -785,9 +762,15 @@ class _ScrollReader extends StatefulWidget {
 class _ScrollReaderState extends State<_ScrollReader> {
   late final ScrollController _ctrl =
       ScrollController(initialScrollOffset: widget.initialScrollOffset ?? 0);
+
+  /// 累計過邊距離（負=越過頂部，正=越過底部）
   double _overscroll = 0;
+  /// 本次拖拽是否已觸發
   bool _fired = false;
-  static const _threshold = 80.0;
+  /// 觸發後在指定毫秒內忽略下一次觸發，避免章節剛切完就被連觸發
+  bool _cooldown = false;
+
+  static const _threshold = 60.0;
 
   @override
   void dispose() {
@@ -796,17 +779,25 @@ class _ScrollReaderState extends State<_ScrollReader> {
   }
 
   bool _onNotif(ScrollNotification n) {
-    if (n is OverscrollNotification) {
+    if (n is ScrollStartNotification) {
+      _overscroll = 0;
+      _fired = false;
+    } else if (n is OverscrollNotification) {
       _overscroll += n.overscroll;
-      if (!_fired && _overscroll.abs() >= _threshold) {
+      // 一旦累積過閾值立即觸發；不必等 ScrollEnd（觸感更跟手）
+      if (!_fired && !_cooldown && _overscroll.abs() >= _threshold) {
         _fired = true;
+        _cooldown = true;
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) _cooldown = false;
+        });
         if (_overscroll < 0) {
           widget.onPrev();
         } else {
           widget.onNext();
         }
       }
-    } else if (n is ScrollEndNotification || n is ScrollStartNotification) {
+    } else if (n is ScrollEndNotification) {
       _overscroll = 0;
       _fired = false;
     }
@@ -823,82 +814,84 @@ class _ScrollReaderState extends State<_ScrollReader> {
       color: widget.baseStyle.color,
     );
 
-    final headerColor = widget.baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
+    final subtleColor = widget.baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
 
-    return Stack(
-      children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: _onNotif,
-          child: ListView(
-            controller: _ctrl,
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-            padding: EdgeInsets.fromLTRB(widget.padH, 56, widget.padH, 64),
-            children: [
-              if (widget.chapter.title.isNotEmpty) ...[
-                Text(widget.chapter.title, style: titleStyle),
-                SizedBox(height: paragraphSpacing * 1.6),
-              ],
-              for (final p in widget.chapter.paragraphs) ...[
-                Text(
-                  '\u3000\u3000${p.trim()}',
-                  style: widget.baseStyle,
-                  textAlign: TextAlign.justify,
-                  strutStyle: StrutStyle(
-                    fontSize: widget.baseStyle.fontSize,
-                    height: widget.baseStyle.height,
-                    forceStrutHeight: true,
-                  ),
-                ),
-                SizedBox(height: paragraphSpacing),
-              ],
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Center(
-                  child: Text(
-                    '— 繼續上滑進入下一章 —',
-                    style: GoogleFonts.notoSansTc(
-                      fontSize: 12,
-                      color: widget.baseStyle.color?.withOpacity(0.4),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: paragraphSpacing * 2),
-            ],
-          ),
-        ),
-        // 頂部 chrome（章節 / 書名）
-        Positioned(
-          top: 16,
-          left: widget.padH,
-          right: widget.padH,
-          child: SizedBox(
+    // 上下滑模式採用 Column 佈局，頂/底狀態欄獨立區域，
+    // 不會與正文滾動區域重疊；正文區域 = Expanded(ListView)
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: widget.padH),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 頂部狀態欄
+          SizedBox(
             height: _kPageHeaderH,
             child: _PageHeader(
               left: widget.chapterTitle,
               right: widget.bookTitle,
-              color: headerColor,
+              color: subtleColor,
             ),
           ),
-        ),
-        // 底部 chrome（時間 + 電量）
-        Positioned(
-          bottom: 16,
-          left: widget.padH,
-          right: widget.padH,
-          child: SizedBox(
+          SizedBox(height: _kPageHeaderGap),
+          // 正文滾動區
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onNotif,
+              child: ListView(
+                controller: _ctrl,
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                children: [
+                  if (widget.chapter.title.isNotEmpty) ...[
+                    Text(widget.chapter.title, style: titleStyle),
+                    SizedBox(height: paragraphSpacing * 1.6),
+                  ],
+                  for (final p in widget.chapter.paragraphs) ...[
+                    Text(
+                      '\u3000\u3000${p.trim()}',
+                      style: widget.baseStyle,
+                      textAlign: TextAlign.justify,
+                      strutStyle: StrutStyle(
+                        fontSize: widget.baseStyle.fontSize,
+                        height: widget.baseStyle.height,
+                        forceStrutHeight: true,
+                      ),
+                    ),
+                    SizedBox(height: paragraphSpacing),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Center(
+                      child: Text(
+                        '— 繼續上滑進入下一章 —',
+                        style: GoogleFonts.notoSansTc(
+                          fontSize: 12,
+                          color: subtleColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: paragraphSpacing * 2),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: _kPageFooterGap),
+          // 底部狀態欄：時間 + 電量
+          SizedBox(
             height: _kStatusBarH,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _TimeDisplay(color: headerColor),
+                _TimeDisplay(color: subtleColor),
                 const SizedBox(width: 8),
-                _BatteryDisplay(color: headerColor),
+                _BatteryDisplay(color: subtleColor),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
