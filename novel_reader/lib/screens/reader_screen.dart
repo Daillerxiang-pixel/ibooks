@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -21,10 +23,16 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../widgets/reader_settings_sheet.dart';
 
 // ─────────────────────────── 常量 ───────────────────────────
-/// 預設頁邊距（小/中/大 來自 [PageMargin]，默認跟 medium = 20）
-const double _kPagePadTop = 48.0;
-/// 頁底狀態列佔用高度（10px 字體 + 上下間距）
-const double _kStatusBarH = 22.0;
+/// 頁面頂部「章節 / 書名」狀態欄佔用高度
+const double _kPageHeaderH = 18.0;
+/// 頂部狀態欄與正文之間的間隔
+const double _kPageHeaderGap = 14.0;
+/// 正文與底部狀態欄之間的間隔
+const double _kPageFooterGap = 6.0;
+/// 頁底「頁碼 / 時間 / 電量」狀態欄佔用高度
+const double _kStatusBarH = 18.0;
+/// 頁面頂部到正文起點的總高度（向下兼容原 _kPagePadTop）
+const double _kPagePadTop = _kPageHeaderH + _kPageHeaderGap;
 
 /// 沉浸式閱讀器 v2
 ///   - 翻頁手勢：左 1/3 上一頁，右 1/3 下一頁，中央切換 chrome
@@ -53,6 +61,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
   bool _switching = false;
   List<ChapterListItem>? _toc;
   bool _chromeVisible = false;
+
+  /// 從後端取的書名，用於頁面頂部右上角顯示
+  String? _bookTitle;
 
   /// 分頁模式下的當前頁（0-based），用於底部進度滑桿同步
   int _currentPage = 0;
@@ -151,6 +162,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
       });
       // 預載入鄰章（fire-and-forget）
       _prefetchNeighbors();
+      // 拉取書名（頂部右上角顯示，僅取一次）
+      if (_bookTitle == null) _fetchBookTitle();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -165,6 +178,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _fetchBookTitle() async {
+    try {
+      final repo = context.read<IbooksRepository>();
+      final b = await repo.bookDetail(widget.bookId);
+      if (mounted && b != null) {
+        setState(() => _bookTitle = b.title);
+      }
+    } catch (_) {/* 忽略；頂部書名留空即可 */}
   }
 
   Future<void> _prefetchNeighbors() async {
@@ -378,6 +401,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
                                   onNext: () => _goNeighbor(1),
                                   initialPageIndex: _initialPageIndex,
                                   initialScrollOffset: _initialScrollOffset,
+                                  bookTitle: _bookTitle ?? '',
+                                  chapterTitle: _body?.title ?? '',
                                   onPageChanged: (page, total) {
                                     if (_currentPage != page || _totalPages != total) {
                                       setState(() {
@@ -665,6 +690,8 @@ class _ReaderBody extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onPageChanged,
+    required this.bookTitle,
+    required this.chapterTitle,
     this.initialPageIndex,
     this.initialScrollOffset,
   });
@@ -678,6 +705,8 @@ class _ReaderBody extends StatelessWidget {
   final void Function(int page, int total) onPageChanged;
   final int? initialPageIndex;
   final double? initialScrollOffset;
+  final String bookTitle;
+  final String chapterTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +718,8 @@ class _ReaderBody extends StatelessWidget {
           baseStyle: baseStyle,
           padH: padH,
           initialScrollOffset: initialScrollOffset,
+          bookTitle: bookTitle,
+          chapterTitle: chapterTitle,
           onPrev: onPrev,
           onNext: onNext,
         );
@@ -698,6 +729,8 @@ class _ReaderBody extends StatelessWidget {
           baseStyle: baseStyle,
           padH: padH,
           initialPageIndex: initialPageIndex,
+          bookTitle: bookTitle,
+          chapterTitle: chapterTitle,
           pageTurnNotifier: pageTurnNotifier,
           onPrev: onPrev,
           onNext: onNext,
@@ -710,6 +743,8 @@ class _ReaderBody extends StatelessWidget {
           baseStyle: baseStyle,
           padH: padH,
           initialPageIndex: initialPageIndex,
+          bookTitle: bookTitle,
+          chapterTitle: chapterTitle,
           pageTurnNotifier: pageTurnNotifier,
           onPrev: onPrev,
           onNext: onNext,
@@ -729,6 +764,8 @@ class _ScrollReader extends StatefulWidget {
     required this.padH,
     required this.onPrev,
     required this.onNext,
+    required this.bookTitle,
+    required this.chapterTitle,
     this.initialScrollOffset,
   });
 
@@ -736,6 +773,8 @@ class _ScrollReader extends StatefulWidget {
   final TextStyle baseStyle;
   final double padH;
   final double? initialScrollOffset;
+  final String bookTitle;
+  final String chapterTitle;
   final Future<void> Function() onPrev;
   final Future<void> Function() onNext;
 
@@ -784,46 +823,82 @@ class _ScrollReaderState extends State<_ScrollReader> {
       color: widget.baseStyle.color,
     );
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: _onNotif,
-      child: ListView(
-        controller: _ctrl,
-        physics:
-            const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: EdgeInsets.fromLTRB(widget.padH, 56, widget.padH, 64),
-        children: [
-          if (widget.chapter.title.isNotEmpty) ...[
-            Text(widget.chapter.title, style: titleStyle),
-            SizedBox(height: paragraphSpacing * 1.6),
-          ],
-          for (final p in widget.chapter.paragraphs) ...[
-            Text(
-              '\u3000\u3000${p.trim()}',
-              style: widget.baseStyle,
-              textAlign: TextAlign.justify,
-              strutStyle: StrutStyle(
-                fontSize: widget.baseStyle.fontSize,
-                height: widget.baseStyle.height,
-                forceStrutHeight: true,
-              ),
-            ),
-            SizedBox(height: paragraphSpacing),
-          ],
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Center(
-              child: Text(
-                '— 繼續上滑進入下一章 —',
-                style: GoogleFonts.notoSansTc(
-                  fontSize: 12,
-                  color: widget.baseStyle.color?.withOpacity(0.4),
+    final headerColor = widget.baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
+
+    return Stack(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _onNotif,
+          child: ListView(
+            controller: _ctrl,
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: EdgeInsets.fromLTRB(widget.padH, 56, widget.padH, 64),
+            children: [
+              if (widget.chapter.title.isNotEmpty) ...[
+                Text(widget.chapter.title, style: titleStyle),
+                SizedBox(height: paragraphSpacing * 1.6),
+              ],
+              for (final p in widget.chapter.paragraphs) ...[
+                Text(
+                  '\u3000\u3000${p.trim()}',
+                  style: widget.baseStyle,
+                  textAlign: TextAlign.justify,
+                  strutStyle: StrutStyle(
+                    fontSize: widget.baseStyle.fontSize,
+                    height: widget.baseStyle.height,
+                    forceStrutHeight: true,
+                  ),
+                ),
+                SizedBox(height: paragraphSpacing),
+              ],
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Center(
+                  child: Text(
+                    '— 繼續上滑進入下一章 —',
+                    style: GoogleFonts.notoSansTc(
+                      fontSize: 12,
+                      color: widget.baseStyle.color?.withOpacity(0.4),
+                    ),
+                  ),
                 ),
               ),
+              SizedBox(height: paragraphSpacing * 2),
+            ],
+          ),
+        ),
+        // 頂部 chrome（章節 / 書名）
+        Positioned(
+          top: 16,
+          left: widget.padH,
+          right: widget.padH,
+          child: SizedBox(
+            height: _kPageHeaderH,
+            child: _PageHeader(
+              left: widget.chapterTitle,
+              right: widget.bookTitle,
+              color: headerColor,
             ),
           ),
-          SizedBox(height: paragraphSpacing * 2),
-        ],
-      ),
+        ),
+        // 底部 chrome（時間 + 電量）
+        Positioned(
+          bottom: 16,
+          left: widget.padH,
+          right: widget.padH,
+          child: SizedBox(
+            height: _kStatusBarH,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _TimeDisplay(color: headerColor),
+                const SizedBox(width: 8),
+                _BatteryDisplay(color: headerColor),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -840,6 +915,8 @@ class _PageReader extends StatefulWidget {
     required this.onNext,
     required this.curl,
     required this.onPageChanged,
+    required this.bookTitle,
+    required this.chapterTitle,
     this.initialPageIndex,
   });
 
@@ -847,6 +924,8 @@ class _PageReader extends StatefulWidget {
   final TextStyle baseStyle;
   final double padH;
   final int? initialPageIndex;
+  final String bookTitle;
+  final String chapterTitle;
   final ValueNotifier<int> pageTurnNotifier;
   final Future<void> Function() onPrev;
   final Future<void> Function() onNext;
@@ -1025,6 +1104,8 @@ class _PageReaderState extends State<_PageReader> {
                 pageIndex: index - 1,
                 baseStyle: widget.baseStyle,
                 padH: widget.padH,
+                bookTitle: widget.bookTitle,
+                chapterTitle: widget.chapterTitle,
               );
             }
             if (!widget.curl) return page;
@@ -1069,12 +1150,16 @@ class _PageContent extends StatelessWidget {
     required this.pageIndex,
     required this.baseStyle,
     required this.padH,
+    required this.bookTitle,
+    required this.chapterTitle,
   });
 
   final ChapterLayout layout;
   final int pageIndex;
   final TextStyle baseStyle;
   final double padH;
+  final String bookTitle;
+  final String chapterTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -1084,7 +1169,16 @@ class _PageContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(height: _kPagePadTop),
+          // 頂部狀態列：左 章節名，右 書名
+          SizedBox(
+            height: _kPageHeaderH,
+            child: _PageHeader(
+              left: chapterTitle,
+              right: bookTitle,
+              color: subtleColor,
+            ),
+          ),
+          SizedBox(height: _kPageHeaderGap),
           // 整章排版的 y 區段 [pageIndex*contentH, (pageIndex+1)*contentH)
           ClipRect(
             child: SizedBox(
@@ -1096,22 +1190,69 @@ class _PageContent extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '${pageIndex + 1} / ${layout.pageCount}',
-                  style: GoogleFonts.notoSansTc(fontSize: 10, color: subtleColor),
-                  overflow: TextOverflow.ellipsis,
+          SizedBox(height: _kPageFooterGap),
+          // 底部狀態列：左 頁碼，右 時間 + 電量
+          SizedBox(
+            height: _kStatusBarH,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${pageIndex + 1} / ${layout.pageCount}',
+                    style: GoogleFonts.notoSansTc(fontSize: 10, color: subtleColor),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-              _TimeDisplay(color: subtleColor),
-            ],
+                _TimeDisplay(color: subtleColor),
+                const SizedBox(width: 8),
+                _BatteryDisplay(color: subtleColor),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 頁面頂部「章節名 · 書名」狀態列
+class _PageHeader extends StatelessWidget {
+  const _PageHeader({
+    required this.left,
+    required this.right,
+    required this.color,
+  });
+  final String left;
+  final String right;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final st = GoogleFonts.notoSansTc(fontSize: 10, color: color);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          flex: 5,
+          child: Text(
+            left,
+            style: st,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Expanded(
+          flex: 4,
+          child: Text(
+            right,
+            style: st,
+            maxLines: 1,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1129,6 +1270,96 @@ class _ChapterSlicePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _ChapterSlicePainter old) =>
       old.layout != layout || old.pageIndex != pageIndex;
+}
+
+/// 常駐電量顯示（每 60 秒刷新一次；圖示 + 百分比）
+class _BatteryDisplay extends StatefulWidget {
+  const _BatteryDisplay({required this.color});
+  final Color color;
+
+  @override
+  State<_BatteryDisplay> createState() => _BatteryDisplayState();
+}
+
+class _BatteryDisplayState extends State<_BatteryDisplay> {
+  final _battery = Battery();
+  int? _level;
+  StreamSubscription<BatteryState>? _stateSub;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
+    _stateSub = _battery.onBatteryStateChanged.listen((_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final l = await _battery.batteryLevel;
+      if (mounted) setState(() => _level = l);
+    } catch (_) {/* 部分設備不支持 */}
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _stateSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lv = _level ?? 100;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 18,
+          height: 10,
+          child: CustomPaint(painter: _BatteryPainter(level: lv, color: widget.color)),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$lv%',
+          style: GoogleFonts.notoSansTc(fontSize: 10, color: widget.color),
+        ),
+      ],
+    );
+  }
+}
+
+class _BatteryPainter extends CustomPainter {
+  _BatteryPainter({required this.level, required this.color});
+  final int level;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    final body = Rect.fromLTWH(0, 0, size.width - 2, size.height);
+    final r = RRect.fromRectAndRadius(body, const Radius.circular(1.5));
+    canvas.drawRRect(r, paint);
+
+    // 電池正極小帽
+    final cap = Rect.fromLTWH(size.width - 2, size.height * 0.25, 2, size.height * 0.5);
+    canvas.drawRect(cap, Paint()..color = color);
+
+    // 內部填充
+    final pct = (level.clamp(0, 100)) / 100.0;
+    final inner = Rect.fromLTWH(1.5, 1.5, (body.width - 3) * pct, body.height - 3);
+    canvas.drawRect(inner, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BatteryPainter old) =>
+      old.level != level || old.color != color;
 }
 
 /// 常駐時間顯示（每分鐘更新）

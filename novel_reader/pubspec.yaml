@@ -17,6 +17,7 @@ dependencies:
   provider: ^6.1.2
   shared_preferences: ^2.3.3
   wakelock_plus: ^1.2.10
+  battery_plus: ^6.2.1
 
 dev_dependencies:
   flutter_test:
