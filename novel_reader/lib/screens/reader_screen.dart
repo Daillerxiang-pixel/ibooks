@@ -15,7 +15,7 @@ import '../src/data/reader_settings.dart';
 import '../src/data/shelf_controller.dart';
 import '../src/domain/chapter_body.dart';
 import '../src/domain/chapter_meta.dart';
-import '../src/reader/paginator.dart';
+import '../src/reader/chapter_layout.dart';
 import '../widgets/reader_settings_sheet.dart';
 
 // ─────────────────────────── 常量 ───────────────────────────
@@ -789,10 +789,9 @@ class _PageReader extends StatefulWidget {
 
 class _PageReaderState extends State<_PageReader> {
   PageController? _pc;
-  List<String> _pages = [];
+  ChapterLayout? _layout;
   bool _paginating = false;
   Size? _lastSize;
-  double _contentH = 0;
 
   // 防止哨兵頁連續觸發章節切換
   bool _switchInFlight = false;
@@ -807,6 +806,7 @@ class _PageReaderState extends State<_PageReader> {
   void dispose() {
     widget.pageTurnNotifier.removeListener(_onExternalPageTurn);
     _pc?.dispose();
+    _layout?.dispose();
     super.dispose();
   }
 
@@ -817,8 +817,9 @@ class _PageReaderState extends State<_PageReader> {
     final pc = _pc;
     if (pc == null || !pc.hasClients) return;
     final current = pc.page?.round() ?? 1;
+    final pageCount = _layout?.pageCount ?? 0;
     final target = current + delta;
-    if (target < 0 || target >= _pages.length + 2) return;
+    if (target < 0 || target >= pageCount + 2) return;
     pc.animateToPage(
       target,
       duration: const Duration(milliseconds: 200),
@@ -828,7 +829,7 @@ class _PageReaderState extends State<_PageReader> {
 
   void _paginate(Size size) {
     if (_paginating) return;
-    if (size == _lastSize && _pages.isNotEmpty) return;
+    if (size == _lastSize && _layout != null) return;
     _paginating = true;
     _lastSize = size;
 
@@ -838,7 +839,7 @@ class _PageReaderState extends State<_PageReader> {
     // ── 精確計算每頁行數，文字區域高度 = linesPerPage × lineH ──
     final lineH = widget.baseStyle.fontSize! * (widget.baseStyle.height ?? 1.0);
     final availH = size.height - _kPagePadTop - _kStatusBarH;
-    final linesPerPage = (availH / lineH).floor();
+    final linesPerPage = (availH / lineH).floor().clamp(1, 1000);
     final contentH = linesPerPage * lineH;
 
     final strutStyle = StrutStyle(
@@ -846,32 +847,33 @@ class _PageReaderState extends State<_PageReader> {
       height: widget.baseStyle.height,
       forceStrutHeight: true,
     );
-    final newPages = ChapterPaginator(
+
+    // 整章一次性排版；後續每頁通過 CustomPaint 平移繪製，不再切片字符串
+    _layout?.dispose();
+    final newLayout = ChapterLayout.layout(
       fullText: fullText,
       style: widget.baseStyle,
-      pageWidth: pageW,
-      linesPerPage: linesPerPage,
-      lineHeight: lineH,
       strutStyle: strutStyle,
-    ).paginate();
+      pageWidth: pageW,
+      contentH: contentH,
+    );
 
     // 保持當前頁位置（哨兵頁 offset = 1）
     int currentContent = 0;
     if (_pc != null && _pc!.hasClients) {
       currentContent = math.max(0, (_pc!.page?.round() ?? 1) - 1);
     }
-    currentContent = currentContent.clamp(0, math.max(0, newPages.length - 1));
+    currentContent = currentContent.clamp(0, math.max(0, newLayout.pageCount - 1));
 
     _pc?.dispose();
     _pc = PageController(initialPage: currentContent + 1);
 
     setState(() {
-      _pages = newPages;
-      _contentH = contentH;
+      _layout = newLayout;
       _paginating = false;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.onPageChanged(currentContent, newPages.length);
+      widget.onPageChanged(currentContent, newLayout.pageCount);
     });
   }
 
@@ -893,13 +895,11 @@ class _PageReaderState extends State<_PageReader> {
   }
 
   void _onPageChanged(int index) {
-    final contentPages = _pages.length;
-    // 通知父層更新進度
+    final contentPages = _layout?.pageCount ?? 0;
     if (index > 0 && index <= contentPages) {
       widget.onPageChanged(index - 1, contentPages);
     }
 
-    // 哨兵頁切章（防止重複觸發）
     if (_switchInFlight) return;
     if (index == 0) {
       _switchInFlight = true;
@@ -915,12 +915,12 @@ class _PageReaderState extends State<_PageReader> {
     return LayoutBuilder(
       builder: (context, c) {
         final size = Size(c.maxWidth, c.maxHeight);
-        // 在 build 後觸發分頁（避免直接在 build 中做耗時計算）
-        if (_pages.isEmpty || size != _lastSize) {
+        if (_layout == null || size != _lastSize) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _paginate(size));
         }
 
-        if (_pages.isEmpty) {
+        final layout = _layout;
+        if (layout == null) {
           return Center(
             child: CircularProgressIndicator(
               color: widget.baseStyle.color?.withOpacity(0.4),
@@ -929,7 +929,7 @@ class _PageReaderState extends State<_PageReader> {
           );
         }
 
-        final total = _pages.length + 2; // 含兩個哨兵頁
+        final total = layout.pageCount + 2; // 含兩個哨兵頁
 
         return PageView.builder(
           controller: _pc,
@@ -953,11 +953,9 @@ class _PageReaderState extends State<_PageReader> {
               );
             } else {
               page = _PageContent(
-                text: _pages[index - 1],
+                layout: layout,
                 pageIndex: index - 1,
-                totalPages: _pages.length,
                 baseStyle: widget.baseStyle,
-                contentH: _contentH,
               );
             }
             if (!widget.curl) return page;
@@ -990,22 +988,22 @@ class _PageReaderState extends State<_PageReader> {
 }
 
 // ─────────────────────────── 頁面內容 ───────────────────────────
+//
+// 直接用 [CustomPaint] 在每頁上畫 **共用 TextPainter** 的對應 y 區段。
+// 因為整章只排版一次、所有頁共用同一份畫布坐標，故每頁渲染高度
+// 與 paginator 計算的 `contentH` **像素級一致**，從根本上沒有
+// 「測量 vs 渲染」的差異。
 
 class _PageContent extends StatelessWidget {
   const _PageContent({
-    required this.text,
+    required this.layout,
     required this.pageIndex,
-    required this.totalPages,
     required this.baseStyle,
-    required this.contentH,
   });
 
-  final String text;
+  final ChapterLayout layout;
   final int pageIndex;
-  final int totalPages;
   final TextStyle baseStyle;
-  /// 精確文字區域高度（= linesPerPage × lineH），零留白
-  final double contentH;
 
   @override
   Widget build(BuildContext context) {
@@ -1016,32 +1014,25 @@ class _PageContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(height: _kPagePadTop),
-          // 正文：精確高度，零留白
-          SizedBox(
-            height: contentH,
-            child: Text(
-              text,
-              style: baseStyle,
-              textAlign: TextAlign.justify,
-              strutStyle: StrutStyle(
-                fontSize: baseStyle.fontSize,
-                height: baseStyle.height,
-                forceStrutHeight: true,
+          // 整章排版的 y 區段 [pageIndex*contentH, (pageIndex+1)*contentH)
+          ClipRect(
+            child: SizedBox(
+              width: layout.pageWidth,
+              height: layout.contentH,
+              child: CustomPaint(
+                painter: _ChapterSlicePainter(layout: layout, pageIndex: pageIndex),
+                size: Size(layout.pageWidth, layout.contentH),
               ),
             ),
           ),
-          // 狀態欄緊貼文字下方
           const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  '${pageIndex + 1} / $totalPages',
-                  style: GoogleFonts.notoSansTc(
-                    fontSize: 10,
-                    color: subtleColor,
-                  ),
+                  '${pageIndex + 1} / ${layout.pageCount}',
+                  style: GoogleFonts.notoSansTc(fontSize: 10, color: subtleColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1052,6 +1043,21 @@ class _PageContent extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChapterSlicePainter extends CustomPainter {
+  _ChapterSlicePainter({required this.layout, required this.pageIndex});
+  final ChapterLayout layout;
+  final int pageIndex;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    layout.paintPage(canvas, pageIndex);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChapterSlicePainter old) =>
+      old.layout != layout || old.pageIndex != pageIndex;
 }
 
 /// 常駐時間顯示（每分鐘更新）
