@@ -906,11 +906,8 @@ class _PageReaderState extends State<_PageReader> {
     final fullText = _composeFull(widget.chapter);
     final pageW = size.width - widget.padH * 2;
 
-    // ── 精確計算每頁行數，文字區域高度 = linesPerPage × lineH ──
-    final lineH = widget.baseStyle.fontSize! * (widget.baseStyle.height ?? 1.0);
+    // 文本可用區高度（由 ChapterLayout 內部按實測行高換算 contentH，避免半字截斷）
     final availH = size.height - _kPagePadTop - _kStatusBarH;
-    final linesPerPage = (availH / lineH).floor().clamp(1, 1000);
-    final contentH = linesPerPage * lineH;
 
     final strutStyle = StrutStyle(
       fontSize: widget.baseStyle.fontSize,
@@ -918,14 +915,13 @@ class _PageReaderState extends State<_PageReader> {
       forceStrutHeight: true,
     );
 
-    // 整章一次性排版；後續每頁通過 CustomPaint 平移繪製，不再切片字符串
     _layout?.dispose();
     final newLayout = ChapterLayout.layout(
       fullText: fullText,
       style: widget.baseStyle,
       strutStyle: strutStyle,
       pageWidth: pageW,
-      contentH: contentH,
+      availableHeight: availH,
     );
 
     // 保持當前頁位置（哨兵頁 offset = 1）；首次分頁優先使用 initialPageIndex
