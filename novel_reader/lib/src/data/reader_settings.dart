@@ -122,6 +122,7 @@ class ReaderSettings extends ChangeNotifier {
   static const _kLineSpacing = 'reader_line_spacing_v2';
   static const _kFontFamily = 'reader_font_family';
   static const _kPageMode = 'reader_page_mode';
+  static const _kBrightness = 'reader_brightness';
 
   static const double minFontSize = 14;
   static const double maxFontSize = 26;
@@ -131,6 +132,8 @@ class ReaderSettings extends ChangeNotifier {
   LineSpacing _lineSpacing = LineSpacing.medium;
   ReaderFontFamily _family = ReaderFontFamily.sans;
   PageTurnMode _pageMode = PageTurnMode.scroll;
+  /// 螢幕亮度覆蓋層透明度：1.0 = 最亮（無遮罩），0.2 = 最暗
+  double _brightness = 1.0;
 
   ReaderTheme get theme => _theme;
   double get fontSize => _fontSize;
@@ -138,6 +141,7 @@ class ReaderSettings extends ChangeNotifier {
   double get lineHeight => _lineSpacing.value;
   ReaderFontFamily get family => _family;
   PageTurnMode get pageMode => _pageMode;
+  double get brightness => _brightness;
 
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
@@ -170,6 +174,7 @@ class ReaderSettings extends ChangeNotifier {
         orElse: () => PageTurnMode.scroll,
       );
     }
+    _brightness = (p.getDouble(_kBrightness) ?? 1.0).clamp(0.2, 1.0);
     notifyListeners();
   }
 
@@ -216,5 +221,14 @@ class ReaderSettings extends ChangeNotifier {
     notifyListeners();
     final p = await SharedPreferences.getInstance();
     await p.setString(_kPageMode, v.name);
+  }
+
+  Future<void> setBrightness(double v) async {
+    final c = v.clamp(0.2, 1.0);
+    if ((c - _brightness).abs() < 0.01) return;
+    _brightness = c;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setDouble(_kBrightness, c);
   }
 }

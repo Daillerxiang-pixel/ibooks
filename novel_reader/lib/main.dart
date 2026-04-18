@@ -5,6 +5,7 @@ import 'app/ibooks_app.dart';
 import 'config/app_config.dart';
 import 'router/app_router.dart';
 import 'src/api/ibooks_api_client.dart';
+import 'src/data/chapter_content_repository.dart';
 import 'src/data/ibooks_repository.dart';
 import 'src/data/reader_settings.dart';
 import 'src/data/session_controller.dart';
@@ -25,12 +26,15 @@ Future<void> main() async {
 
   debugPrint('iBooks API: ${AppConfig.apiBaseUrl}');
 
+  final contentRepo = ChapterContentRepository();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<SessionController>.value(value: session),
         Provider<IbooksApiClient>.value(value: api),
         Provider<IbooksRepository>.value(value: repo),
+        Provider<ChapterContentRepository>.value(value: contentRepo),
         ChangeNotifierProvider<ShelfController>.value(value: shelf),
         ChangeNotifierProvider<ReaderSettings>.value(value: readerSettings),
       ],

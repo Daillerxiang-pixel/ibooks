@@ -1,94 +1,80 @@
 import 'package:flutter/material.dart';
 
-/// 將整章正文按給定樣式 + 頁面尺寸切成若干「整頁」字符串。
-/// 採用二分法：每頁找到能完全容納在 [size] 內的最長前綴，再嘗試在「。！？」等
-/// 自然斷點上回退，避免句子被切到下一頁開頭。
+/// 行級分頁器
+///
+/// 給定 **整章**、**樣式**、**頁寬** 與「**每頁可容納行數** [linesPerPage]」，
+/// 返回若干頁字符串：除最後一頁外，每頁的渲染高度恰為
+/// `linesPerPage × lineHeight`，**頁底不會殘留空白**。
+///
+/// 實現方式：用 [TextPainter] 對整章做一次完整排版，
+/// 透過 [TextPainter.computeLineMetrics] 知道每一行在原始排版中的位置，
+/// 然後按行索引切分原文字符串。
 class ChapterPaginator {
   ChapterPaginator({
     required this.fullText,
     required this.style,
-    required this.size,
+    required this.pageWidth,
+    required this.linesPerPage,
+    required this.lineHeight,
     this.strutStyle,
   });
 
   final String fullText;
   final TextStyle style;
-
-  /// 一頁可顯示文本的可用區域（已扣除外部 padding）
-  final Size size;
+  final double pageWidth;
+  final int linesPerPage;
+  final double lineHeight;
   final StrutStyle? strutStyle;
 
   List<String> paginate() {
-    if (fullText.isEmpty || size.width <= 0 || size.height <= 0) {
+    if (fullText.isEmpty || pageWidth <= 0 || linesPerPage <= 0) {
       return [fullText];
     }
-    final pages = <String>[];
-    String remaining = _trimLeadingBlank(fullText);
-    while (remaining.isNotEmpty) {
-      // 整段已能放下：作為最後一頁結束
-      if (_heightOf(remaining) <= size.height + 0.5) {
-        pages.add(remaining);
-        break;
-      }
-      // 二分搜索最長能放下的前綴長度
-      int lo = 1;
-      int hi = remaining.length;
-      int best = 1;
-      while (lo <= hi) {
-        final mid = (lo + hi) >> 1;
-        final h = _heightOf(remaining.substring(0, mid));
-        if (h <= size.height + 0.5) {
-          best = mid;
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-      // 在標點處回退（最多 60 字），讓段落更自然
-      best = _preferBreak(remaining, best);
-      pages.add(remaining.substring(0, best));
-      remaining = _trimLeadingBlank(remaining.substring(best));
-      if (pages.length > 5000) break;
-    }
-    if (pages.isEmpty) pages.add('');
-    return pages;
-  }
 
-  double _heightOf(String text) {
     final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
+      text: TextSpan(text: fullText, style: style),
       textDirection: TextDirection.ltr,
       maxLines: null,
       strutStyle: strutStyle,
-    )..layout(maxWidth: size.width);
-    final h = tp.size.height;
-    tp.dispose();
-    return h;
-  }
+    )..layout(maxWidth: pageWidth);
 
-  int _preferBreak(String text, int end) {
-    const maxBack = 60;
-    final lower = (end - maxBack).clamp(1, end);
-    for (int i = end - 1; i >= lower; i--) {
-      final ch = text[i];
-      if (ch == '\n' ||
-          ch == '。' ||
-          ch == '！' ||
-          ch == '？' ||
-          ch == '」' ||
-          ch == '”' ||
-          ch == '；') {
-        return i + 1;
+    final lines = tp.computeLineMetrics();
+    if (lines.isEmpty) {
+      tp.dispose();
+      return [fullText];
+    }
+
+    final pages = <String>[];
+    for (int i = 0; i < lines.length; i += linesPerPage) {
+      final endLine =
+          (i + linesPerPage > lines.length) ? lines.length : i + linesPerPage;
+      final startOffset = _offsetAtLineStart(tp, lines, i);
+      final endOffset = (endLine >= lines.length)
+          ? fullText.length
+          : _offsetAtLineStart(tp, lines, endLine);
+      var slice = fullText.substring(startOffset, endOffset);
+      // 行尾的 `\n` 是上一行的終止符；若帶到下一頁開頭會多出一行空白
+      if (slice.endsWith('\n')) {
+        slice = slice.substring(0, slice.length - 1);
       }
+      pages.add(slice);
     }
-    return end;
+
+    tp.dispose();
+    if (pages.isEmpty) pages.add(fullText);
+    return pages;
   }
 
-  String _trimLeadingBlank(String s) {
-    int i = 0;
-    while (i < s.length && (s[i] == '\n' || s[i] == ' ' || s[i] == '\u3000')) {
-      i++;
-    }
-    return s.substring(i);
+  /// 在第 [lineIndex] 行的起點查詢字符偏移
+  int _offsetAtLineStart(
+    TextPainter tp,
+    List<LineMetrics> lines,
+    int lineIndex,
+  ) {
+    if (lineIndex <= 0) return 0;
+    final lm = lines[lineIndex];
+    // 行頂坐標 = baseline - ascent；微微下沉 0.5 落入該行內部
+    final y = lm.baseline - lm.ascent + 0.5;
+    return tp.getPositionForOffset(Offset(0.5, y)).offset;
   }
 }

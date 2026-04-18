@@ -147,6 +147,24 @@ class ReaderSettingsSheet extends StatelessWidget {
                 ],
               ],
             ),
+            const SizedBox(height: 14),
+
+            // 亮度（輔助說明）
+            label('亮度  ${(s.brightness * 100).round()}%'),
+            Row(
+              children: [
+                Icon(Icons.brightness_low_outlined, size: 18, color: subtle),
+                Expanded(
+                  child: Slider(
+                    value: s.brightness,
+                    min: 0.2,
+                    max: 1.0,
+                    onChanged: s.setBrightness,
+                  ),
+                ),
+                Icon(Icons.brightness_high_outlined, size: 18, color: subtle),
+              ],
+            ),
           ],
         ),
       ),
