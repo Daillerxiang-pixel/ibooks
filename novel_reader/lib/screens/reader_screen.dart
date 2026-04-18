@@ -499,14 +499,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
                     child: _BottomChrome(
                       settings: settings,
                       fg: fg,
-                      currentPage: _currentPage,
-                      totalPages: _totalPages,
                       onToc: _openToc,
                       onSettings: () => ReaderSettingsSheet.show(context),
-                      onPageJump: (page) {
-                        setState(() => _currentPage = page);
-                        _pageTurnNotifier.value = page - _currentPage;
-                      },
                     ),
                   ),
                 ),
@@ -525,127 +519,45 @@ class _BottomChrome extends StatelessWidget {
   const _BottomChrome({
     required this.settings,
     required this.fg,
-    required this.currentPage,
-    required this.totalPages,
     required this.onToc,
     required this.onSettings,
-    required this.onPageJump,
   });
 
   final ReaderSettings settings;
   final Color fg;
-  final int currentPage;
-  final int totalPages;
   final VoidCallback onToc;
   final VoidCallback onSettings;
-  final void Function(int page) onPageJump;
 
   @override
   Widget build(BuildContext context) {
-    final subtle = settings.theme.subtle;
-    final isPageMode = settings.pageMode != PageTurnMode.scroll;
-    final progressRatio =
-        totalPages <= 1 ? 0.0 : currentPage / (totalPages - 1).toDouble();
-
     return Material(
       color: settings.theme.chromeBg,
       child: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // 進度滑桿（僅分頁模式顯示）
-              if (isPageMode && totalPages > 1) ...[
-                Row(
-                  children: [
-                    Text(
-                      '${currentPage + 1}',
-                      style: GoogleFonts.notoSansTc(fontSize: 11, color: subtle),
-                    ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderThemeData(
-                          trackHeight: 2,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                          activeTrackColor: fg.withOpacity(0.7),
-                          inactiveTrackColor: fg.withOpacity(0.15),
-                          thumbColor: fg,
-                          overlayColor: fg.withOpacity(0.1),
-                        ),
-                        child: Slider(
-                          value: progressRatio.clamp(0.0, 1.0),
-                          onChanged: (v) {
-                            final page = (v * (totalPages - 1)).round();
-                            onPageJump(page);
-                          },
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '$totalPages',
-                      style: GoogleFonts.notoSansTc(fontSize: 11, color: subtle),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-              ],
-
-              // 亮度滑桿
-              Row(
-                children: [
-                  Icon(Icons.brightness_low, size: 16, color: subtle),
-                  Expanded(
-                    child: SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 2,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                        activeTrackColor: fg.withOpacity(0.7),
-                        inactiveTrackColor: fg.withOpacity(0.15),
-                        thumbColor: fg,
-                        overlayColor: fg.withOpacity(0.1),
-                      ),
-                      child: Slider(
-                        value: settings.brightness,
-                        min: 0.2,
-                        max: 1.0,
-                        onChanged: settings.setBrightness,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.brightness_high, size: 16, color: subtle),
-                ],
+              _ChromeBtn(
+                icon: Icons.menu_book_outlined,
+                label: '目錄',
+                fg: fg,
+                onTap: onToc,
               ),
-              const SizedBox(height: 4),
-
-              // 三按鈕列：目錄 / 日夜 / 設定
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _ChromeBtn(
-                    icon: Icons.menu_book_outlined,
-                    label: '目錄',
-                    fg: fg,
-                    onTap: onToc,
-                  ),
-                  _ChromeBtn(
-                    icon: settings.theme == ReaderTheme.dark
-                        ? Icons.wb_sunny_outlined
-                        : Icons.nights_stay_outlined,
-                    label: settings.theme == ReaderTheme.dark ? '日間' : '夜間',
-                    fg: fg,
-                    onTap: () => settings.toggleDayNight(),
-                  ),
-                  _ChromeBtn(
-                    icon: Icons.format_size,
-                    label: '設定',
-                    fg: fg,
-                    onTap: onSettings,
-                  ),
-                ],
+              _ChromeBtn(
+                icon: settings.theme == ReaderTheme.dark
+                    ? Icons.wb_sunny_outlined
+                    : Icons.nights_stay_outlined,
+                label: settings.theme == ReaderTheme.dark ? '日間' : '夜間',
+                fg: fg,
+                onTap: () => settings.toggleDayNight(),
+              ),
+              _ChromeBtn(
+                icon: Icons.format_size,
+                label: '設定',
+                fg: fg,
+                onTap: onSettings,
               ),
             ],
           ),
