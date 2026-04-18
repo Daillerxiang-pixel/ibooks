@@ -149,7 +149,56 @@ class ReaderSettingsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // 亮度（輔助說明）
+            // 頁邊距
+            label('頁邊距'),
+            Row(
+              children: [
+                for (final pm in PageMargin.values) ...[
+                  Expanded(
+                    child: _Chip(
+                      label: pm.label,
+                      selected: s.pageMargin == pm,
+                      onTap: () => s.setPageMargin(pm),
+                      fg: fg,
+                      subtle: subtle,
+                    ),
+                  ),
+                  if (pm != PageMargin.values.last) const SizedBox(width: 10),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // 屏幕常亮
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => s.setKeepScreenOn(!s.keepScreenOn),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline, size: 18, color: subtle),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '閱讀時屏幕常亮',
+                          style: GoogleFonts.notoSansTc(fontSize: 13.5, color: fg),
+                        ),
+                      ),
+                      Switch(
+                        value: s.keepScreenOn,
+                        onChanged: s.setKeepScreenOn,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+
+            // 亮度
             label('亮度  ${(s.brightness * 100).round()}%'),
             Row(
               children: [

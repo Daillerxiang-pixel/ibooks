@@ -15,11 +15,13 @@ import '../src/data/reader_settings.dart';
 import '../src/data/shelf_controller.dart';
 import '../src/domain/chapter_body.dart';
 import '../src/domain/chapter_meta.dart';
+import '../src/data/reading_progress_store.dart';
 import '../src/reader/chapter_layout.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../widgets/reader_settings_sheet.dart';
 
 // ─────────────────────────── 常量 ───────────────────────────
-const double _kPagePadH = 20.0;
+/// 預設頁邊距（小/中/大 來自 [PageMargin]，默認跟 medium = 20）
 const double _kPagePadTop = 48.0;
 /// 頁底狀態列佔用高度（10px 字體 + 上下間距）
 const double _kStatusBarH = 22.0;
@@ -56,10 +58,42 @@ class _ReaderScreenState extends State<ReaderScreen> {
   int _currentPage = 0;
   int _totalPages = 1;
 
+  /// 啟動時從 [ReadingProgressStore] 取出的「上次閱讀位置」，
+  /// 章節加載完成後傳給 [_PageReader] / [_ScrollReader] 用作初始頁/初始滾動。
+  int? _initialPageIndex;
+  double? _initialScrollOffset;
+
+  ReaderSettings? _settingsRef;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _settingsRef = context.read<ReaderSettings>();
+      _settingsRef!.addListener(_applyKeepScreenOn);
+      _applyKeepScreenOn();
+      _load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _settingsRef?.removeListener(_applyKeepScreenOn);
+    // 離開閱讀器時禁用屏幕常亮
+    WakelockPlus.disable();
+    // 立即落盤未保存的進度
+    ReadingProgressStore.instance.flush();
+    _pageTurnNotifier.dispose();
+    super.dispose();
+  }
+
+  void _applyKeepScreenOn() {
+    final on = _settingsRef?.keepScreenOn ?? true;
+    if (on) {
+      WakelockPlus.enable();
+    } else {
+      WakelockPlus.disable();
+    }
   }
 
   @override
@@ -80,7 +114,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
       _chromeVisible = false;
       _currentPage = 0;
       _totalPages = 1;
+      _initialPageIndex = null;
+      _initialScrollOffset = null;
     });
+    // 嘗試恢復進度（同章節才恢復）
+    final saved = await ReadingProgressStore.instance.load(widget.bookId);
+    if (saved != null && saved.chapterId == widget.chapterId) {
+      _initialPageIndex = saved.pageIndex;
+      _initialScrollOffset = saved.scrollOffset;
+    }
+    if (!mounted) return;
     final repo = context.read<IbooksRepository>();
     final contentRepo = context.read<ChapterContentRepository>();
     try {
@@ -273,12 +316,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // 通知 _PageReader 翻頁（+1 / -1）
   final ValueNotifier<int> _pageTurnNotifier = ValueNotifier(0);
 
-  @override
-  void dispose() {
-    _pageTurnNotifier.dispose();
-    super.dispose();
-  }
-
   // ─────────────────── Build ───────────────────
 
   @override
@@ -339,6 +376,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
                                   pageTurnNotifier: _pageTurnNotifier,
                                   onPrev: () => _goNeighbor(-1),
                                   onNext: () => _goNeighbor(1),
+                                  initialPageIndex: _initialPageIndex,
+                                  initialScrollOffset: _initialScrollOffset,
                                   onPageChanged: (page, total) {
                                     if (_currentPage != page || _totalPages != total) {
                                       setState(() {
@@ -346,6 +385,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
                                         _totalPages = total;
                                       });
                                     }
+                                    // 持久化進度
+                                    ReadingProgressStore.instance.save(
+                                      widget.bookId,
+                                      ReadingProgress(
+                                        chapterId: widget.chapterId,
+                                        pageIndex: page,
+                                        totalPages: total,
+                                        scrollOffset: 0,
+                                        updatedAt: DateTime.now(),
+                                      ),
+                                    );
                                   },
                                 ),
                     );
@@ -615,6 +665,8 @@ class _ReaderBody extends StatelessWidget {
     required this.onPrev,
     required this.onNext,
     required this.onPageChanged,
+    this.initialPageIndex,
+    this.initialScrollOffset,
   });
 
   final ChapterBody chapter;
@@ -624,14 +676,19 @@ class _ReaderBody extends StatelessWidget {
   final Future<void> Function() onPrev;
   final Future<void> Function() onNext;
   final void Function(int page, int total) onPageChanged;
+  final int? initialPageIndex;
+  final double? initialScrollOffset;
 
   @override
   Widget build(BuildContext context) {
+    final padH = settings.pageMargin.value;
     switch (settings.pageMode) {
       case PageTurnMode.scroll:
         return _ScrollReader(
           chapter: chapter,
           baseStyle: baseStyle,
+          padH: padH,
+          initialScrollOffset: initialScrollOffset,
           onPrev: onPrev,
           onNext: onNext,
         );
@@ -639,6 +696,8 @@ class _ReaderBody extends StatelessWidget {
         return _PageReader(
           chapter: chapter,
           baseStyle: baseStyle,
+          padH: padH,
+          initialPageIndex: initialPageIndex,
           pageTurnNotifier: pageTurnNotifier,
           onPrev: onPrev,
           onNext: onNext,
@@ -649,6 +708,8 @@ class _ReaderBody extends StatelessWidget {
         return _PageReader(
           chapter: chapter,
           baseStyle: baseStyle,
+          padH: padH,
+          initialPageIndex: initialPageIndex,
           pageTurnNotifier: pageTurnNotifier,
           onPrev: onPrev,
           onNext: onNext,
@@ -665,12 +726,16 @@ class _ScrollReader extends StatefulWidget {
   const _ScrollReader({
     required this.chapter,
     required this.baseStyle,
+    required this.padH,
     required this.onPrev,
     required this.onNext,
+    this.initialScrollOffset,
   });
 
   final ChapterBody chapter;
   final TextStyle baseStyle;
+  final double padH;
+  final double? initialScrollOffset;
   final Future<void> Function() onPrev;
   final Future<void> Function() onNext;
 
@@ -679,7 +744,8 @@ class _ScrollReader extends StatefulWidget {
 }
 
 class _ScrollReaderState extends State<_ScrollReader> {
-  final _ctrl = ScrollController();
+  late final ScrollController _ctrl =
+      ScrollController(initialScrollOffset: widget.initialScrollOffset ?? 0);
   double _overscroll = 0;
   bool _fired = false;
   static const _threshold = 80.0;
@@ -724,7 +790,7 @@ class _ScrollReaderState extends State<_ScrollReader> {
         controller: _ctrl,
         physics:
             const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        padding: const EdgeInsets.fromLTRB(20, 56, 20, 64),
+        padding: EdgeInsets.fromLTRB(widget.padH, 56, widget.padH, 64),
         children: [
           if (widget.chapter.title.isNotEmpty) ...[
             Text(widget.chapter.title, style: titleStyle),
@@ -768,15 +834,19 @@ class _PageReader extends StatefulWidget {
   const _PageReader({
     required this.chapter,
     required this.baseStyle,
+    required this.padH,
     required this.pageTurnNotifier,
     required this.onPrev,
     required this.onNext,
     required this.curl,
     required this.onPageChanged,
+    this.initialPageIndex,
   });
 
   final ChapterBody chapter;
   final TextStyle baseStyle;
+  final double padH;
+  final int? initialPageIndex;
   final ValueNotifier<int> pageTurnNotifier;
   final Future<void> Function() onPrev;
   final Future<void> Function() onNext;
@@ -834,7 +904,7 @@ class _PageReaderState extends State<_PageReader> {
     _lastSize = size;
 
     final fullText = _composeFull(widget.chapter);
-    final pageW = size.width - _kPagePadH * 2;
+    final pageW = size.width - widget.padH * 2;
 
     // ── 精確計算每頁行數，文字區域高度 = linesPerPage × lineH ──
     final lineH = widget.baseStyle.fontSize! * (widget.baseStyle.height ?? 1.0);
@@ -858,10 +928,12 @@ class _PageReaderState extends State<_PageReader> {
       contentH: contentH,
     );
 
-    // 保持當前頁位置（哨兵頁 offset = 1）
+    // 保持當前頁位置（哨兵頁 offset = 1）；首次分頁優先使用 initialPageIndex
     int currentContent = 0;
     if (_pc != null && _pc!.hasClients) {
       currentContent = math.max(0, (_pc!.page?.round() ?? 1) - 1);
+    } else if (widget.initialPageIndex != null) {
+      currentContent = widget.initialPageIndex!;
     }
     currentContent = currentContent.clamp(0, math.max(0, newLayout.pageCount - 1));
 
@@ -956,6 +1028,7 @@ class _PageReaderState extends State<_PageReader> {
                 layout: layout,
                 pageIndex: index - 1,
                 baseStyle: widget.baseStyle,
+                padH: widget.padH,
               );
             }
             if (!widget.curl) return page;
@@ -999,17 +1072,19 @@ class _PageContent extends StatelessWidget {
     required this.layout,
     required this.pageIndex,
     required this.baseStyle,
+    required this.padH,
   });
 
   final ChapterLayout layout;
   final int pageIndex;
   final TextStyle baseStyle;
+  final double padH;
 
   @override
   Widget build(BuildContext context) {
     final subtleColor = baseStyle.color?.withOpacity(0.38) ?? Colors.grey;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _kPagePadH),
+      padding: EdgeInsets.symmetric(horizontal: padH),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

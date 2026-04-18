@@ -16,6 +16,7 @@ dependencies:
   encrypt: ^5.0.3
   provider: ^6.1.2
   shared_preferences: ^2.3.3
+  wakelock_plus: ^1.2.10
 
 dev_dependencies:
   flutter_test:

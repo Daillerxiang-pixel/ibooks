@@ -9,6 +9,40 @@ rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
+
+// 部分插件（如 wakelock_plus → package_info_plus）的 build.gradle 直接讀
+// android.flutter.minSdkVersion / compileSdkVersion / targetSdkVersion，
+// 但這些只有在 :app 模塊由 FlutterPlugin 注入。需在 :app 之外的子工程顯式注入。
+subprojects { subproject ->
+    if (subproject.name != "app") {
+        subproject.beforeEvaluate {
+            if (!subproject.ext.has("flutter")) {
+                subproject.ext.set("flutter", [
+                    compileSdkVersion: 34,
+                    minSdkVersion    : 23,
+                    targetSdkVersion : 34,
+                ])
+            }
+        }
+        subproject.afterEvaluate {
+            if (subproject.plugins.hasPlugin("com.android.library") ||
+                    subproject.plugins.hasPlugin("com.android.application")) {
+                def androidExt = subproject.extensions.findByName("android")
+                if (androidExt != null) {
+                    androidExt.compileSdkVersion 34
+                    if (!androidExt.ext.has("flutter")) {
+                        androidExt.ext.set("flutter", [
+                            compileSdkVersion: 34,
+                            minSdkVersion    : 23,
+                            targetSdkVersion : 34,
+                        ])
+                    }
+                }
+            }
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

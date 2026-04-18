@@ -116,6 +116,33 @@ extension PageTurnModeExt on PageTurnMode {
   }
 }
 
+/// 頁面左右內邊距檔位（影響每頁可顯示寬度）
+enum PageMargin { small, medium, large }
+
+extension PageMarginExt on PageMargin {
+  String get label {
+    switch (this) {
+      case PageMargin.small:
+        return '窄';
+      case PageMargin.medium:
+        return '中';
+      case PageMargin.large:
+        return '寬';
+    }
+  }
+
+  double get value {
+    switch (this) {
+      case PageMargin.small:
+        return 12;
+      case PageMargin.medium:
+        return 20;
+      case PageMargin.large:
+        return 32;
+    }
+  }
+}
+
 class ReaderSettings extends ChangeNotifier {
   static const _kTheme = 'reader_theme';
   static const _kFontSize = 'reader_font_size';
@@ -123,6 +150,8 @@ class ReaderSettings extends ChangeNotifier {
   static const _kFontFamily = 'reader_font_family';
   static const _kPageMode = 'reader_page_mode';
   static const _kBrightness = 'reader_brightness';
+  static const _kPageMargin = 'reader_page_margin';
+  static const _kKeepScreenOn = 'reader_keep_screen_on';
 
   static const double minFontSize = 14;
   static const double maxFontSize = 26;
@@ -134,6 +163,8 @@ class ReaderSettings extends ChangeNotifier {
   PageTurnMode _pageMode = PageTurnMode.scroll;
   /// 螢幕亮度覆蓋層透明度：1.0 = 最亮（無遮罩），0.2 = 最暗
   double _brightness = 1.0;
+  PageMargin _pageMargin = PageMargin.medium;
+  bool _keepScreenOn = true;
 
   ReaderTheme get theme => _theme;
   double get fontSize => _fontSize;
@@ -142,6 +173,8 @@ class ReaderSettings extends ChangeNotifier {
   ReaderFontFamily get family => _family;
   PageTurnMode get pageMode => _pageMode;
   double get brightness => _brightness;
+  PageMargin get pageMargin => _pageMargin;
+  bool get keepScreenOn => _keepScreenOn;
 
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
@@ -175,6 +208,14 @@ class ReaderSettings extends ChangeNotifier {
       );
     }
     _brightness = (p.getDouble(_kBrightness) ?? 1.0).clamp(0.2, 1.0);
+    final pmg = p.getString(_kPageMargin);
+    if (pmg != null) {
+      _pageMargin = PageMargin.values.firstWhere(
+        (e) => e.name == pmg,
+        orElse: () => PageMargin.medium,
+      );
+    }
+    _keepScreenOn = p.getBool(_kKeepScreenOn) ?? true;
     notifyListeners();
   }
 
@@ -230,5 +271,21 @@ class ReaderSettings extends ChangeNotifier {
     notifyListeners();
     final p = await SharedPreferences.getInstance();
     await p.setDouble(_kBrightness, c);
+  }
+
+  Future<void> setPageMargin(PageMargin v) async {
+    if (_pageMargin == v) return;
+    _pageMargin = v;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_kPageMargin, v.name);
+  }
+
+  Future<void> setKeepScreenOn(bool v) async {
+    if (_keepScreenOn == v) return;
+    _keepScreenOn = v;
+    notifyListeners();
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kKeepScreenOn, v);
   }
 }
