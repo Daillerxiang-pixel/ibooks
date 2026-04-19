@@ -269,20 +269,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  bool _hasPrev() {
-    final toc = _toc;
-    if (toc == null) return true; // unknown, allow attempt
-    final i = toc.indexWhere((c) => c.id == widget.chapterId);
-    return i > 0;
-  }
-
-  bool _hasNext() {
-    final toc = _toc;
-    if (toc == null) return true;
-    final i = toc.indexWhere((c) => c.id == widget.chapterId);
-    return i >= 0 && i < toc.length - 1;
-  }
-
   void _toast(String s) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -675,14 +661,10 @@ class _ScrollReaderState extends State<_ScrollReader> {
   late final ScrollController _ctrl =
       ScrollController(initialScrollOffset: widget.initialScrollOffset ?? 0);
 
-  /// 累計過邊距離（負=越過頂部，正=越過底部）
-  double _overscroll = 0;
-  /// 本次拖拽是否已觸發
   bool _fired = false;
-  /// 觸發後在指定毫秒內忽略下一次觸發，避免章節剛切完就被連觸發
   bool _cooldown = false;
-
-  static const _threshold = 60.0;
+  // 像素閾值：用戶把列表拖過邊界 >= 此值就切章
+  static const _pxThreshold = 36.0;
 
   @override
   void dispose() {
@@ -691,26 +673,29 @@ class _ScrollReaderState extends State<_ScrollReader> {
   }
 
   bool _onNotif(ScrollNotification n) {
-    if (n is ScrollStartNotification) {
-      _overscroll = 0;
-      _fired = false;
-    } else if (n is OverscrollNotification) {
-      _overscroll += n.overscroll;
-      // 一旦累積過閾值立即觸發；不必等 ScrollEnd（觸感更跟手）
-      if (!_fired && !_cooldown && _overscroll.abs() >= _threshold) {
-        _fired = true;
-        _cooldown = true;
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) _cooldown = false;
-        });
-        if (_overscroll < 0) {
-          widget.onPrev();
-        } else {
-          widget.onNext();
-        }
+    if (_fired || _cooldown) {
+      if (n is ScrollEndNotification) {
+        _fired = false;
+      }
+      return false;
+    }
+    final m = n.metrics;
+    final overTop = m.pixels < m.minScrollExtent - _pxThreshold;
+    final overBottom = m.pixels > m.maxScrollExtent + _pxThreshold;
+    if ((n is ScrollUpdateNotification || n is OverscrollNotification) &&
+        (overTop || overBottom)) {
+      _fired = true;
+      _cooldown = true;
+      Future.delayed(const Duration(milliseconds: 900), () {
+        if (mounted) _cooldown = false;
+      });
+      HapticFeedback.lightImpact();
+      if (overTop) {
+        widget.onPrev();
+      } else {
+        widget.onNext();
       }
     } else if (n is ScrollEndNotification) {
-      _overscroll = 0;
       _fired = false;
     }
     return false;
@@ -755,6 +740,18 @@ class _ScrollReaderState extends State<_ScrollReader> {
                     parent: BouncingScrollPhysics()),
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Center(
+                      child: Text(
+                        '↓ 繼續下拉返回上一章',
+                        style: GoogleFonts.notoSansTc(
+                          fontSize: 11.5,
+                          color: subtleColor,
+                        ),
+                      ),
+                    ),
+                  ),
                   if (widget.chapter.title.isNotEmpty) ...[
                     Text(widget.chapter.title, style: titleStyle),
                     SizedBox(height: paragraphSpacing * 1.6),
