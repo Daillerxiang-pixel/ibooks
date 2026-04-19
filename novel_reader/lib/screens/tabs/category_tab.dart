@@ -74,28 +74,23 @@ class _CategoryTabState extends State<CategoryTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 24),
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
         children: [
           const SectionTitleRow(title: '全部分類', marginTop: 0),
           if (cats.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              child: Text(
-                '暫無分類數據',
-                style: TextStyle(color: IbColors.inkMuted),
-              ),
+            const Text(
+              '暫無分類數據',
+              style: TextStyle(color: IbColors.inkMuted),
             )
           else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: GridView.count(
-                crossAxisCount: 4,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.95,
-                children: [
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.95,
+              children: [
                   for (final entry in cats.entries)
                     InkWell(
                       onTap: () => context.push(
@@ -134,67 +129,60 @@ class _CategoryTabState extends State<CategoryTab> {
                         ),
                       ),
                     ),
-                ],
-              ),
+              ],
             ),
           const SectionTitleRow(title: '分類熱門', marginTop: 16),
           if (hot.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 14),
-              child: Text(
-                '暫無書籍數據',
-                style: TextStyle(color: IbColors.inkMuted),
-              ),
+            const Text(
+              '暫無書籍數據',
+              style: TextStyle(color: IbColors.inkMuted),
             )
           else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 8,
-                childAspectRatio: 0.62,
-                children: [
-                  for (final b in hot)
-                    InkWell(
-                      onTap: () => context.push('/detail/${b.id}'),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: NetworkBookCover(
-                              coverUrl: b.coverUrl,
-                              borderRadius: 10,
-                              aspectRatio: 3 / 4,
-                            ),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.62,
+              children: [
+                for (final b in hot)
+                  InkWell(
+                    onTap: () => context.push('/detail/${b.id}'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: NetworkBookCover(
+                            coverUrl: b.coverUrl,
+                            borderRadius: 10,
+                            aspectRatio: 3 / 4,
                           ),
-                          const SizedBox(height: 6),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          b.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSansTc(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if ((b.category ?? '').isNotEmpty)
                           Text(
-                            b.title,
+                            b.category!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.notoSansTc(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 9.9,
+                              color: IbColors.inkMuted,
                             ),
                           ),
-                          if ((b.category ?? '').isNotEmpty)
-                            Text(
-                              b.category!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.notoSansTc(
-                                fontSize: 9.9,
-                                color: IbColors.inkMuted,
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
         ],
       ),

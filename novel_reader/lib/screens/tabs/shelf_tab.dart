@@ -35,7 +35,7 @@ class _ShelfTabState extends State<ShelfTab> {
     return RefreshIndicator(
       onRefresh: () => shelf.refresh(),
       child: ListView(
-        padding: const EdgeInsets.only(top: 6, bottom: 24),
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
         children: [
           if (!session.isLoggedIn)
             Padding(

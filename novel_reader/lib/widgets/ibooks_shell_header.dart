@@ -65,9 +65,11 @@ class IbShellHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(11),
                   onTap: onSearch,
                   child: const SizedBox(
-                    width: 38,
-                    height: 38,
-                    child: Center(child: Text('🔍', style: TextStyle(fontSize: 16))),
+                    width: 40,
+                    height: 40,
+                    child: Center(
+                      child: Icon(Icons.search, size: 20, color: IbColors.ink),
+                    ),
                   ),
                 ),
               ),

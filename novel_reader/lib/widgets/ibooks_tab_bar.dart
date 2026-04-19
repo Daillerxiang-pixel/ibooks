@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/ibooks_colors.dart';
 
-/// 底部 TabBar：與整體背景一致，橫鋪全屏，安全區同色（避免底部白條）。
+/// 底部 TabBar：與整體背景一致，橫鋪全屏；安全區同色。
+/// 圖標使用 Material 體系：未選中 outlined / 選中 filled。
 class IbTabBar extends StatelessWidget {
   const IbTabBar({
     super.key,
@@ -14,11 +15,11 @@ class IbTabBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onChanged;
 
-  static const _items = <({String icon, String label})>[
-    (icon: '📚', label: '書架'),
-    (icon: '📖', label: '書城'),
-    (icon: '🗂', label: '分類'),
-    (icon: '👤', label: '我的'),
+  static const _items = <_TabSpec>[
+    _TabSpec(active: Icons.collections_bookmark, idle: Icons.collections_bookmark_outlined, label: '書架'),
+    _TabSpec(active: Icons.menu_book, idle: Icons.menu_book_outlined, label: '書城'),
+    _TabSpec(active: Icons.dashboard, idle: Icons.dashboard_outlined, label: '分類'),
+    _TabSpec(active: Icons.person, idle: Icons.person_outline, label: '我的'),
   ];
 
   @override
@@ -31,27 +32,27 @@ class IbTabBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        // 用同色 ColoredBox 包裹下緣安全區，避免某些機型默認白色背景
         minimum: EdgeInsets.zero,
         child: SizedBox(
-          height: 56,
+          height: 58,
           child: Row(
             children: List.generate(_items.length, (i) {
               final on = i == currentIndex;
+              final c = on ? IbColors.accent : IbColors.inkMuted;
               return Expanded(
                 child: InkWell(
                   onTap: () => onChanged(i),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_items[i].icon, style: const TextStyle(fontSize: 18.4)),
-                      const SizedBox(height: 1),
+                      Icon(on ? _items[i].active : _items[i].idle, size: 22, color: c),
+                      const SizedBox(height: 2),
                       Text(
                         _items[i].label,
                         style: GoogleFonts.notoSansTc(
-                          fontSize: 9.3,
-                          fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                          color: on ? IbColors.accent : IbColors.inkMuted,
+                          fontSize: 10.5,
+                          fontWeight: on ? FontWeight.w600 : FontWeight.w500,
+                          color: c,
                         ),
                       ),
                     ],
@@ -64,4 +65,11 @@ class IbTabBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TabSpec {
+  const _TabSpec({required this.active, required this.idle, required this.label});
+  final IconData active;
+  final IconData idle;
+  final String label;
 }

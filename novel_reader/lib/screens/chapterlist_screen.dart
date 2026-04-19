@@ -7,7 +7,7 @@ import '../src/api/api_exception.dart';
 import '../src/data/ibooks_repository.dart';
 import '../theme/ibooks_colors.dart';
 import '../widgets/ibooks_subpage_scaffold.dart';
-import '../widgets/section_title_row.dart';
+
 class ChapterListScreen extends StatefulWidget {
   const ChapterListScreen({
     super.key,
@@ -86,20 +86,20 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
       },
       child: IbSubpageScaffold(
         title: '目錄',
-        subtitle: '章節列表',
+        subtitle: title,
         onBack: () => _handleBack(context),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              title,
-              style: GoogleFonts.notoSansTc(fontSize: 14, fontWeight: FontWeight.w600, height: 1.4),
-            ),
-            Text(
-              '書籍 ID ${widget.bookId} · 由後端 /api/books/:id/chapters',
-              style: GoogleFonts.notoSansTc(fontSize: 11.5, color: IbColors.inkMuted),
-            ),
-            const SizedBox(height: 12),
+            if (_items != null && _items!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  '共 ${_items!.length} 章',
+                  style: GoogleFonts.notoSansTc(
+                      fontSize: 11.5, color: IbColors.inkMuted),
+                ),
+              ),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(24),
@@ -135,7 +135,6 @@ class _ChapterListScreenState extends State<ChapterListScreen> {
                     ),
                 ],
               ),
-            const HintLine('點章節進入閱讀器；付費章需登入並購買後由後端下發密鑰。'),
           ],
         ),
       ),
@@ -154,16 +153,48 @@ class _Chap extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: IbColors.line)),
+        ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(child: Text(title, style: GoogleFonts.notoSansTc(fontSize: 13.1))),
-            Text(
-              paid ? '🔒 付費' : '免費',
-              style: GoogleFonts.notoSansTc(fontSize: 11.5, color: paid ? IbColors.gold : IbColors.inkMuted),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansTc(fontSize: 13.5),
+              ),
             ),
+            const SizedBox(width: 8),
+            if (paid)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 13, color: IbColors.gold),
+                  const SizedBox(width: 4),
+                  Text(
+                    '付費',
+                    style: GoogleFonts.notoSansTc(
+                      fontSize: 11.2,
+                      color: IbColors.gold,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                '免費',
+                style: GoogleFonts.notoSansTc(
+                  fontSize: 11.2,
+                  color: IbColors.inkMuted,
+                ),
+              ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 18, color: IbColors.inkMuted.withOpacity(0.6)),
           ],
         ),
       ),

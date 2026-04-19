@@ -42,12 +42,13 @@ class IbSubpageScaffold extends StatelessWidget {
                   SafeArea(
                     bottom: false,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 6, 12, 8),
+                      padding: const EdgeInsets.fromLTRB(4, 6, 8, 6),
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Text('‹', style: TextStyle(fontSize: 28, height: 1)),
-                            padding: EdgeInsets.zero,
+                            tooltip: '返回',
+                            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                            color: IbColors.ink,
                             onPressed: onBack ?? () => context.pop(),
                           ),
                           Expanded(
@@ -57,18 +58,21 @@ class IbSubpageScaffold extends StatelessWidget {
                                 Text(
                                   title,
                                   style: GoogleFonts.notoSansTc(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16.5,
+                                    fontWeight: FontWeight.w700,
                                     color: IbColors.ink,
+                                    height: 1.2,
                                   ),
                                 ),
-                                Text(
-                                  subtitle,
-                                  style: GoogleFonts.notoSansTc(
-                                    fontSize: 11,
-                                    color: IbColors.inkMuted,
+                                if (subtitle.isNotEmpty)
+                                  Text(
+                                    subtitle,
+                                    style: GoogleFonts.notoSansTc(
+                                      fontSize: 11,
+                                      color: IbColors.inkMuted,
+                                      height: 1.4,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ),
@@ -78,7 +82,7 @@ class IbSubpageScaffold extends StatelessWidget {
                   ),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(14, 4, 14, 24),
                       child: body,
                     ),
                   ),

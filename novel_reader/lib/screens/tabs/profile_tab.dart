@@ -81,29 +81,24 @@ class _ProfileTabState extends State<ProfileTab> {
     final session = context.watch<SessionController>();
 
     return ListView(
-      padding: const EdgeInsets.only(top: 8, bottom: 24),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: _AccountCard(
-            session: session,
-            profile: _profile,
-            loading: _loading,
-            err: _err,
-            onLogin: () => context.push('/login'),
-            onLogout: () async => session.logout(),
-            onTopUp: () => context.push('/coinpurchase'),
-            onConsumeLog: () => context.push('/consumelog'),
-            onRetry: _fetchProfile,
-          ),
+        _AccountCard(
+          session: session,
+          profile: _profile,
+          loading: _loading,
+          err: _err,
+          onLogin: () => context.push('/login'),
+          onLogout: () async => session.logout(),
+          onTopUp: () => context.push('/coinpurchase'),
+          onConsumeLog: () => context.push('/consumelog'),
+          onRetry: _fetchProfile,
         ),
         const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: InkWell(
-            onTap: () => context.push('/vippurchase'),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
+        InkWell(
+          onTap: () => context.push('/vippurchase'),
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFF5A3558), Color(0xFF8B4A6E)]),
@@ -136,17 +131,23 @@ class _ProfileTabState extends State<ProfileTab> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.white),
-                ],
-              ),
+                const Icon(Icons.chevron_right, color: Colors.white),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 14),
-        _MenuTile(icon: Icons.receipt_long_outlined, title: '我的訂單', onTap: () => context.push('/rechargeorders')),
-        _MenuTile(icon: Icons.card_giftcard_outlined, title: '優惠券', trailing: '活動', onTap: () => context.push('/couponlist')),
-        _MenuTile(icon: Icons.history, title: '瀏覽記錄', onTap: () => context.push('/browsehistory')),
-        _MenuTile(icon: Icons.settings_outlined, title: '帳號與安全', onTap: () {}),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              _MenuTile(icon: Icons.receipt_long_outlined, title: '我的訂單', onTap: () => context.push('/rechargeorders')),
+              _MenuTile(icon: Icons.card_giftcard_outlined, title: '優惠券', trailing: '活動', onTap: () => context.push('/couponlist')),
+              _MenuTile(icon: Icons.history, title: '瀏覽記錄', onTap: () => context.push('/browsehistory')),
+              _MenuTile(icon: Icons.settings_outlined, title: '帳號與安全', onTap: () {}),
+            ],
+          ),
+        ),
       ],
     );
   }

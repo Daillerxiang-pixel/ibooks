@@ -102,19 +102,23 @@ class _HomeTabState extends State<HomeTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.only(top: 12, bottom: 24),
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
         children: [
-          // 「特色」橫向卡片（基於書籍列表前若干本）
-          _SectionFeatured(
-            books: books.take(4).toList(),
-            onTap: (id) => context.push('/detail/$id'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: _SectionFeatured(
+              books: books.take(4).toList(),
+              onTap: (id) => context.push('/detail/$id'),
+            ),
           ),
-
-          SectionTitleRow(
-            title: '本週推薦',
-            marginTop: 12,
-            trailing: Text('${_featured.length} 本',
-                style: GoogleFonts.notoSansTc(fontSize: 12, color: IbColors.accent)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child: SectionTitleRow(
+              title: '本週推薦',
+              marginTop: 0,
+              trailing: Text('${_featured.length} 本',
+                  style: GoogleFonts.notoSansTc(fontSize: 12, color: IbColors.accent)),
+            ),
           ),
           SizedBox(
             height: 210,
@@ -127,11 +131,13 @@ class _HomeTabState extends State<HomeTab> {
               ],
             ),
           ),
-
           if (_categories.isNotEmpty) ...[
-            const SectionTitleRow(title: '熱門分類', marginTop: 8),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(14, 8, 14, 0),
+              child: SectionTitleRow(title: '熱門分類', marginTop: 0),
+            ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
               child: Wrap(
                 spacing: 6,
                 runSpacing: 6,
@@ -148,17 +154,24 @@ class _HomeTabState extends State<HomeTab> {
               ),
             ),
           ],
-
           if (_ranking.isNotEmpty) ...[
-            const SectionTitleRow(title: '排行榜', marginTop: 12),
-            _RankList(
-              books: _ranking,
-              onTap: (id) => context.push('/detail/$id'),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: SectionTitleRow(title: '排行榜', marginTop: 0),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: _RankList(
+                books: _ranking,
+                onTap: (id) => context.push('/detail/$id'),
+              ),
             ),
           ],
-
           if (_finished.isNotEmpty) ...[
-            const SectionTitleRow(title: '完結作品', marginTop: 12),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: SectionTitleRow(title: '完結作品', marginTop: 0),
+            ),
             SizedBox(
               height: 210,
               child: ListView(
@@ -324,7 +337,7 @@ class _RankList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: IbColors.bgCard,
         borderRadius: BorderRadius.circular(14),
