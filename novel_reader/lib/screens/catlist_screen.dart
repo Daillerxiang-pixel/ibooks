@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
+import '../src/data/ibooks_repository.dart';
 import '../theme/ibooks_colors.dart';
 import '../widgets/book_covers.dart';
+import '../widgets/error_state.dart';
 import '../widgets/ibooks_subpage_scaffold.dart';
 import '../widgets/section_title_row.dart';
 
+/// 按分類列表：拉 `/api/books`，按 `category == categoryName` 過濾。
 class CatlistScreen extends StatefulWidget {
   const CatlistScreen({super.key, required this.categoryName});
 
@@ -16,117 +20,221 @@ class CatlistScreen extends StatefulWidget {
   State<CatlistScreen> createState() => _CatlistScreenState();
 }
 
+enum _SortKey { hot, chapters, words, recent }
+
 class _CatlistScreenState extends State<CatlistScreen> {
-  int _sort = 0;
-  final _sortLabels = const ['綜合熱門', '付費／暢銷', '收藏', '字數', '最近更新'];
+  _SortKey _sort = _SortKey.hot;
+  List<BookRow>? _all;
+  String? _err;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+    try {
+      final list = await context.read<IbooksRepository>().listBooks();
+      if (!mounted) return;
+      setState(() {
+        _all = list;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _err = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  List<BookRow> _filteredSorted() {
+    final src = (_all ?? []).where((b) {
+      if (widget.categoryName == '全部') return true;
+      return (b.category ?? '').trim() == widget.categoryName;
+    }).toList();
+    switch (_sort) {
+      case _SortKey.hot:
+      case _SortKey.chapters:
+        src.sort((a, b) => (b.chapterCount ?? 0).compareTo(a.chapterCount ?? 0));
+        break;
+      case _SortKey.words:
+        src.sort((a, b) => (b.wordCount ?? 0).compareTo(a.wordCount ?? 0));
+        break;
+      case _SortKey.recent:
+        src.sort((a, b) => b.id.compareTo(a.id)); // 沒有 created_at 字段，按 id 倒序近似最新
+        break;
+    }
+    return src;
+  }
+
+  String _sortLabel(_SortKey k) {
+    switch (k) {
+      case _SortKey.hot:
+        return '熱門';
+      case _SortKey.chapters:
+        return '章節數';
+      case _SortKey.words:
+        return '字數';
+      case _SortKey.recent:
+        return '最新';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.categoryName == '全部' ? '全部 · 作品列表' : '${widget.categoryName} · 作品列表';
     return IbSubpageScaffold(
       title: widget.categoryName == '全部' ? '全部分類' : widget.categoryName,
       subtitle: '排序篩選',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('排序方式', style: GoogleFonts.notoSansTc(fontSize: 10.9, color: IbColors.inkMuted, letterSpacing: 0.6)),
+          Text(
+            '排序方式',
+            style: GoogleFonts.notoSansTc(
+              fontSize: 10.9,
+              color: IbColors.inkMuted,
+              letterSpacing: 0.6,
+            ),
+          ),
           const SizedBox(height: 6),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: List.generate(_sortLabels.length, (i) {
-                final on = i == _sort;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(_sortLabels[i], style: GoogleFonts.notoSansTc(fontSize: 11.5)),
-                    selected: on,
-                    onSelected: (_) => setState(() => _sort = i),
-                    selectedColor: IbColors.accentSoft,
-                    labelStyle: TextStyle(color: on ? IbColors.accent : IbColors.inkMuted, fontWeight: on ? FontWeight.w600 : FontWeight.w400),
-                    side: BorderSide(color: on ? IbColors.accent.withOpacity(0.35) : IbColors.line),
-                    backgroundColor: IbColors.bgCard,
+              children: [
+                for (final k in _SortKey.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(_sortLabel(k),
+                          style: GoogleFonts.notoSansTc(fontSize: 11.5)),
+                      selected: k == _sort,
+                      onSelected: (_) => setState(() => _sort = k),
+                      selectedColor: IbColors.accentSoft,
+                      backgroundColor: IbColors.bgCard,
+                    ),
                   ),
-                );
-              }),
+              ],
             ),
           ),
-          SectionTitleRow(title: title, marginTop: 14),
-          _RankRow(n: 1, badge: _Badge.gold, title: '霓虹深處的約定', sub: '連載 · 128 萬字 · 都市言情', stat: '熱銷指數 98', cover: 1, onTap: () => context.push('/detail')),
-          _RankRow(n: 2, badge: _Badge.silver, title: '海風與舊信箋', sub: '完結 · 付費精校', stat: '熱銷 92', cover: 2, onTap: () => context.push('/detail')),
-          _RankRow(n: 3, badge: _Badge.bronze, title: '南洋夜雨錄', sub: '連載 · 海外繁體', stat: '熱銷 88', cover: 3, onTap: () => context.push('/detail')),
-          _RankRow(n: 4, badge: _Badge.plain, title: '霧島心事', sub: '懸疑 · 熱度攀升', stat: '熱銷 81', cover: 4, onTap: () => context.push('/detail')),
-          const HintLine('原型：排序切換會更新右側統計文案；正式版對接 API query。'),
+          if (_loading && _all == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 30),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_err != null && (_all == null || _all!.isEmpty))
+            ErrorState(message: '加載失敗：\n$_err', onRetry: _load)
+          else
+            _buildList(),
         ],
       ),
     );
   }
+
+  Widget _buildList() {
+    final list = _filteredSorted();
+    if (list.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 30),
+        child: Center(
+          child: Text(
+            '此分類下暫無書籍',
+            style: TextStyle(color: IbColors.inkMuted),
+          ),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        SectionTitleRow(title: '${widget.categoryName} · 共 ${list.length} 本', marginTop: 14),
+        for (var i = 0; i < list.length; i++)
+          _BookRow(rank: i + 1, book: list[i], onTap: () => context.push('/detail/${list[i].id}')),
+      ],
+    );
+  }
 }
 
-enum _Badge { gold, silver, bronze, plain }
-
-class _RankRow extends StatelessWidget {
-  const _RankRow({
-    required this.n,
-    required this.badge,
-    required this.title,
-    required this.sub,
-    required this.stat,
-    required this.cover,
-    required this.onTap,
-  });
-
-  final int n;
-  final _Badge badge;
-  final String title;
-  final String sub;
-  final String stat;
-  final int cover;
+class _BookRow extends StatelessWidget {
+  const _BookRow({required this.rank, required this.book, required this.onTap});
+  final int rank;
+  final BookRow book;
   final VoidCallback onTap;
-
-  Color get _badgeColor {
-    switch (badge) {
-      case _Badge.gold:
-        return IbColors.gold;
-      case _Badge.silver:
-        return const Color(0xFFB0B0B0);
-      case _Badge.bronze:
-        return const Color(0xFFCD853F);
-      case _Badge.plain:
-        return IbColors.inkMuted;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            Container(
-              width: 24,
-              alignment: Alignment.center,
+            SizedBox(
+              width: 26,
               child: Text(
-                '$n',
-                style: GoogleFonts.notoSansTc(fontSize: 13, fontWeight: FontWeight.w800, color: _badgeColor),
+                '$rank',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.notoSansTc(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: rank <= 3 ? IbColors.gold : IbColors.inkMuted,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            SizedBox(width: 40, height: 54, child: BookCover(variant: cover, aspectRatio: 3 / 4, borderRadius: 6)),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 48,
+              height: 64,
+              child: NetworkBookCover(
+                coverUrl: book.coverUrl,
+                borderRadius: 6,
+                aspectRatio: 3 / 4,
+              ),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: GoogleFonts.notoSansTc(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  Text(
+                    book.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansTc(
+                      fontSize: 14.2,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(sub, style: GoogleFonts.notoSansTc(fontSize: 11.5, color: IbColors.inkMuted)),
+                  Text(
+                    [
+                      if ((book.author ?? '').isNotEmpty) book.author!,
+                      if ((book.category ?? '').isNotEmpty) book.category!,
+                      if ((book.status ?? '').isNotEmpty) book.status!,
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansTc(
+                      fontSize: 11.2,
+                      color: IbColors.inkMuted,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Text(stat, style: GoogleFonts.notoSansTc(fontSize: 11.5, color: IbColors.inkMuted)),
+            Text(
+              '${book.chapterCount ?? 0} 章',
+              style: GoogleFonts.notoSansTc(
+                fontSize: 11,
+                color: IbColors.inkMuted,
+              ),
+            ),
           ],
         ),
       ),

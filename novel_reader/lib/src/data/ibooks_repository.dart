@@ -73,6 +73,36 @@ class ChapterListItem {
   }
 }
 
+class UserProfile {
+  UserProfile({
+    required this.id,
+    required this.phone,
+    this.nickname,
+    this.avatar,
+    required this.balance,
+    required this.purchases,
+    required this.shelfCount,
+  });
+
+  final String id;
+  final String? phone;
+  final String? nickname;
+  final String? avatar;
+  final num balance;
+  final int purchases;
+  final int shelfCount;
+
+  factory UserProfile.fromJson(Map<String, dynamic> j) => UserProfile(
+        id: j['id']?.toString() ?? '',
+        phone: j['phone'] as String?,
+        nickname: j['nickname'] as String?,
+        avatar: j['avatar'] as String?,
+        balance: (j['balance'] is num) ? j['balance'] as num : num.tryParse('${j['balance']}') ?? 0,
+        purchases: (j['purchases'] as num?)?.toInt() ?? 0,
+        shelfCount: (j['shelfCount'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// 章節正文憑證（與 `ChaptersService` 對齊）。
 class ChapterContentPayload {
   ChapterContentPayload({
@@ -169,6 +199,15 @@ class IbooksRepository {
       throw StateError('章節資料格式錯誤');
     }
     return ChapterContentPayload.fromJson(data);
+  }
+
+  /// 已登入用戶資料（餘額、購買數、書架數量等）
+  Future<UserProfile> userProfile() async {
+    final data = await _api.get('/user');
+    if (data is! Map<String, dynamic>) {
+      throw StateError('用戶資料格式錯誤');
+    }
+    return UserProfile.fromJson(data);
   }
 
   Future<({String token, Map<String, dynamic> user})> register({
